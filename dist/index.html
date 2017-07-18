@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="author" content="Mark A. Ropper">
+        <!--WebGL Shaders-->
+        <script id="shader-vs" type="x-shader/x-vertex">#version 300 es
+            in vec3 aVertexPosition;
+            in vec4 aVertexColour;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+
+            out vec4 vColour;
+
+            void main(void)
+            {
+                gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vColour = aVertexColour;
+            }
+        </script>
+        <script id="shader-fs" type="x-shader/x-fragment">#version 300 es
+            precision lowp float;
+            in vec4 vColour;            
+            out vec4 outColour;
+            void main(void)
+            {
+                outColour = vColour;
+            }
+        </script>
+    </head>
+
+    <body>
+        <div id="maincontent">
+            <div id="logo">
+                <canvas id="logoCanvas" width="1024" height="1024">
+                    Please use a browser that supports the canvas element. :(
+                </canvas>
+                <script type="text/javascript" src="bundle.js"></script>
+            </div>
+            <div id="controls">
+
+            </div>
+        </div>
+    </body>
+</html>

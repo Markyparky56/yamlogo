@@ -1,0 +1,22 @@
+{
+  "name": "yamlogo",
+  "version": "1.0.0",
+  "description": "YAM Logo Designer",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "webpack"
+  },
+  "author": "Mark A. Ropper",
+  "license": "ISC",
+  "dependencies": {
+    "@types/gl-matrix": "^2.2.34",
+    "@types/webgl2": "0.0.1",
+    "gl-matrix": "^2.3.2"
+  },
+  "devDependencies": {
+    "source-map-loader": "^0.2.1",
+    "ts-loader": "^2.2.2",
+    "typescript": "^2.4.1"
+  }
+}
