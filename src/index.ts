@@ -1,4 +1,4 @@
-import { DiscClass } from "./disc"
+import { DiscClass, ColourRGBA } from "./disc"
 import {mat4, vec3} from "gl-matrix"
 
 let GLContext: WebGL2RenderingContext; // Global WebGL2 Context
@@ -64,6 +64,15 @@ function start()
     initShaders();
     initDiscBuffers(disc);
 }
+
+export function updateDisc(radius: number, centreColour: ColourRGBA)
+{
+    disc = new DiscClass(256, radius, centreColour);
+}
+
+// Update waveform
+
+// Update logo text
 
 function initWebGL(canvas: HTMLCanvasElement): WebGL2RenderingContext
 {

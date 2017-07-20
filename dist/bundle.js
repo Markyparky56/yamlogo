@@ -2341,6 +2341,10 @@ function start() {
     initShaders();
     initDiscBuffers(disc);
 }
+function updateDisc(radius, centreColour) {
+    disc = new disc_1.DiscClass(256, radius, centreColour);
+}
+exports.updateDisc = updateDisc;
 function initWebGL(canvas) {
     var gl = null;
     gl = canvas.getContext("webgl2");

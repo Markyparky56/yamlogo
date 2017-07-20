@@ -5,6 +5,7 @@
         <meta charset="UTF-8">
         <meta name="author" content="Mark A. Ropper">
         <link rel="stylesheet" type="text/css" href="yamlogo.css">
+        <link rel="stylesheet" type="text/css" href="spectrum.css">
         <!--WebGL Shaders-->
         <script id="circle-vs" type="x-shader/x-vertex">#version 300 es
             in vec3 aVertexPosition;
@@ -30,6 +31,8 @@
                 outColour = vColour;
             }
         </script>
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js" type="text/javascript" async></script>
+        <script src="spectrum.js" type="text/javascript"></script>
     </head>
 
     <body>
@@ -42,10 +45,10 @@
             </div>
 
             <div id="controls">
-                <script src="jscolor.js"></script>
-                <script src="controls.js"></script>
                 Centre Colour
-                <input class="jscolor {onFineChange: ''}" value="#FFFFFF" >
+                <input type="text" id="centreColourPicker">
+
+                <script src="controls.js"></script>
             </div>
         </div>
     </body>
