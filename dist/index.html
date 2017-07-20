@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <title>YAM Logo Designer</title>
         <meta charset="UTF-8">
         <meta name="author" content="Mark A. Ropper">
+        <link rel="stylesheet" type="text/css" href="yamlogo.css">
         <!--WebGL Shaders-->
-        <script id="shader-vs" type="x-shader/x-vertex">#version 300 es
+        <script id="circle-vs" type="x-shader/x-vertex">#version 300 es
             in vec3 aVertexPosition;
             in vec4 aVertexColour;
 
@@ -19,7 +21,7 @@
                 vColour = aVertexColour;
             }
         </script>
-        <script id="shader-fs" type="x-shader/x-fragment">#version 300 es
+        <script id="circle-fs" type="x-shader/x-fragment">#version 300 es
             precision lowp float;
             in vec4 vColour;            
             out vec4 outColour;
@@ -38,8 +40,12 @@
                 </canvas>
                 <script type="text/javascript" src="bundle.js"></script>
             </div>
-            <div id="controls">
 
+            <div id="controls">
+                <script src="jscolor.js"></script>
+                <script src="controls.js"></script>
+                Centre Colour
+                <input class="jscolor {onFineChange: ''}" value="#FFFFFF" >
             </div>
         </div>
     </body>

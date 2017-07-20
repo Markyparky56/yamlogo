@@ -43,7 +43,7 @@ export class DiscClass
     public colours: number[];
     public centreColour: ColourRGBA;
 
-    private GenerateTriangleFan(segments: number)
+    private GenerateTriangleFan(segments: number, radius: number)
     {
         let thetaStep = 2*Math.PI;
         let centreCol = this.centreColour;
@@ -60,8 +60,8 @@ export class DiscClass
             let theta = s / segments * thetaStep;
 
             // Find vertex
-            vertex.x = Math.cos(theta);
-            vertex.y = Math.sin(theta);
+            vertex.x = Math.cos(theta) * radius;
+            vertex.y = Math.sin(theta) * radius;
             vertex.z = 0.0;
             this.vertices.push(vertex.x, vertex.y, vertex.z);
 
@@ -71,9 +71,9 @@ export class DiscClass
         }
     }
     
-    constructor(segments: number, centreCol: ColourRGBA)
+    constructor(segments: number, radius: number, centreCol: ColourRGBA)
     {
         this.centreColour = centreCol;
-        this.GenerateTriangleFan(segments);
+        this.GenerateTriangleFan(segments, radius);
     }
 }

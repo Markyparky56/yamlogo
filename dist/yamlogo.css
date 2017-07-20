@@ -1,0 +1,24 @@
+body 
+{
+    margin: 0px;
+}
+
+#maincontent
+{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: space-around;
+    align-items: center;
+}
+
+#logoCanvas
+{
+    order: 0;
+}
+
+#controls
+{
+    order: 1;
+    flex-basis: 40%;
+}

@@ -8,7 +8,8 @@ let discVertBuffer: WebGLBuffer;
 let discColourBuffer: WebGLBuffer;
 let mvMatrix: mat4;
 let perspectiveMatrix: mat4;
-let shaderProgram: WebGLProgram;
+let orthoMatrix: mat4;
+let circleShaderProgram: WebGLProgram;
 let vertexPositonAttribute: number;
 let vertexColourAttribute: number;
 
@@ -28,10 +29,11 @@ function mvTranslate(v: vec3)
     mvMatrix = mat4.translate(mvMatrix, mvMatrix, v);
 }
 
-function setMatrixUniforms()
+function setMatrixUniforms(shaderProgram: WebGLProgram)
 {
     let pUniform = GLContext.getUniformLocation(shaderProgram, "uPMatrix");
-    GLContext.uniformMatrix4fv(pUniform, false, perspectiveMatrix);
+    //GLContext.uniformMatrix4fv(pUniform, false, perspectiveMatrix);
+    GLContext.uniformMatrix4fv(pUniform, false, orthoMatrix);
 
     let mvUniform = GLContext.getUniformLocation(shaderProgram, "uMVMatrix");
     GLContext.uniformMatrix4fv(mvUniform, false, mvMatrix);
@@ -57,7 +59,7 @@ function start()
     GLContext.blendFunc(GLContext.SRC_ALPHA, GLContext.ONE);
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
 
-    disc = new DiscClass(256, {r:1.0, g:1.0, b:1.0, a:1.0});
+    disc = new DiscClass(256, 0.9, {r:1.0, g:1.0, b:1.0, a:1.0});
 
     initShaders();
     initDiscBuffers(disc);
@@ -80,26 +82,26 @@ function initWebGL(canvas: HTMLCanvasElement): WebGL2RenderingContext
 
 function initShaders()
 {
-    let fragmentShader: WebGLShader = getShader(GLContext, "shader-fs");
-    let vertexShader: WebGLShader = getShader(GLContext, "shader-vs");
+    let circleFragmentShader: WebGLShader = getShader(GLContext, "circle-fs");
+    let circleVertexShader: WebGLShader = getShader(GLContext, "circle-vs");
 
-    // Create the shader program
-    shaderProgram = GLContext.createProgram();
-    GLContext.attachShader(shaderProgram, vertexShader);
-    GLContext.attachShader(shaderProgram, fragmentShader);
-    GLContext.linkProgram(shaderProgram);
+    // Create the circle shader program
+    circleShaderProgram = GLContext.createProgram();
+    GLContext.attachShader(circleShaderProgram, circleFragmentShader);
+    GLContext.attachShader(circleShaderProgram, circleVertexShader);
+    GLContext.linkProgram(circleShaderProgram);
 
     // If creating the shader program fails, alert
-    if(!GLContext.getProgramParameter(shaderProgram, GLContext.LINK_STATUS))
+    if(!GLContext.getProgramParameter(circleShaderProgram, GLContext.LINK_STATUS))
     {   
-        console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(shaderProgram));
+        console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(circleShaderProgram));
     }
 
-    GLContext.useProgram(shaderProgram);
+    GLContext.useProgram(circleShaderProgram);
 
-    vertexPositonAttribute = GLContext.getAttribLocation(shaderProgram, "aVertexPosition");
+    vertexPositonAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexPosition");
     GLContext.enableVertexAttribArray(vertexPositonAttribute);
-    vertexColourAttribute = GLContext.getAttribLocation(shaderProgram, "aVertexColour");
+    vertexColourAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexColour");
     GLContext.enableVertexAttribArray(vertexColourAttribute);
 }
 
@@ -161,12 +163,15 @@ function initDiscBuffers(disc: DiscClass)
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(disc.colours), GLContext.STATIC_DRAW);
 }
 
-function drawScene()
+export function refresh()
 {
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
 
     perspectiveMatrix = mat4.create();
     perspectiveMatrix = mat4.perspective(perspectiveMatrix, 0.698132, horizAspect, 0.1, 100.0);
+
+    orthoMatrix = mat4.create();
+    orthoMatrix = mat4.ortho(orthoMatrix, -1.0, 1.0, -1.0, 1.0, 0.1, 100.0);
 
     mvMatrix = mat4.create();
     loadIdentity();
@@ -177,9 +182,9 @@ function drawScene()
     GLContext.vertexAttribPointer(vertexPositonAttribute, 3, GLContext.FLOAT, false, 0, 0);
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
     GLContext.vertexAttribPointer(vertexColourAttribute, 4, GLContext.FLOAT, false, 0, 0);
-    setMatrixUniforms();
+    setMatrixUniforms(circleShaderProgram);
     GLContext.drawArrays(GLContext.TRIANGLE_FAN, 0, disc.vertices.length/3);
 }
 
 start();
-drawScene();
+refresh();

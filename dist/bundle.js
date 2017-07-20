@@ -1,3 +1,4 @@
+var bundle =
 /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -2305,7 +2306,8 @@ var discVertBuffer;
 var discColourBuffer;
 var mvMatrix;
 var perspectiveMatrix;
-var shaderProgram;
+var orthoMatrix;
+var circleShaderProgram;
 var vertexPositonAttribute;
 var vertexColourAttribute;
 function loadIdentity() {
@@ -2317,9 +2319,9 @@ function multMatrix(m) {
 function mvTranslate(v) {
     mvMatrix = gl_matrix_1.mat4.translate(mvMatrix, mvMatrix, v);
 }
-function setMatrixUniforms() {
+function setMatrixUniforms(shaderProgram) {
     var pUniform = GLContext.getUniformLocation(shaderProgram, "uPMatrix");
-    GLContext.uniformMatrix4fv(pUniform, false, perspectiveMatrix);
+    GLContext.uniformMatrix4fv(pUniform, false, orthoMatrix);
     var mvUniform = GLContext.getUniformLocation(shaderProgram, "uMVMatrix");
     GLContext.uniformMatrix4fv(mvUniform, false, mvMatrix);
 }
@@ -2335,7 +2337,7 @@ function start() {
     GLContext.depthFunc(GLContext.LEQUAL);
     GLContext.blendFunc(GLContext.SRC_ALPHA, GLContext.ONE);
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
-    disc = new disc_1.DiscClass(256, { r: 1.0, g: 1.0, b: 1.0, a: 1.0 });
+    disc = new disc_1.DiscClass(256, 0.9, { r: 1.0, g: 1.0, b: 1.0, a: 1.0 });
     initShaders();
     initDiscBuffers(disc);
 }
@@ -2348,19 +2350,19 @@ function initWebGL(canvas) {
     return gl;
 }
 function initShaders() {
-    var fragmentShader = getShader(GLContext, "shader-fs");
-    var vertexShader = getShader(GLContext, "shader-vs");
-    shaderProgram = GLContext.createProgram();
-    GLContext.attachShader(shaderProgram, vertexShader);
-    GLContext.attachShader(shaderProgram, fragmentShader);
-    GLContext.linkProgram(shaderProgram);
-    if (!GLContext.getProgramParameter(shaderProgram, GLContext.LINK_STATUS)) {
-        console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(shaderProgram));
+    var circleFragmentShader = getShader(GLContext, "circle-fs");
+    var circleVertexShader = getShader(GLContext, "circle-vs");
+    circleShaderProgram = GLContext.createProgram();
+    GLContext.attachShader(circleShaderProgram, circleFragmentShader);
+    GLContext.attachShader(circleShaderProgram, circleVertexShader);
+    GLContext.linkProgram(circleShaderProgram);
+    if (!GLContext.getProgramParameter(circleShaderProgram, GLContext.LINK_STATUS)) {
+        console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(circleShaderProgram));
     }
-    GLContext.useProgram(shaderProgram);
-    vertexPositonAttribute = GLContext.getAttribLocation(shaderProgram, "aVertexPosition");
+    GLContext.useProgram(circleShaderProgram);
+    vertexPositonAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexPosition");
     GLContext.enableVertexAttribArray(vertexPositonAttribute);
-    vertexColourAttribute = GLContext.getAttribLocation(shaderProgram, "aVertexColour");
+    vertexColourAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexColour");
     GLContext.enableVertexAttribArray(vertexColourAttribute);
 }
 function getShader(gl, id, type) {
@@ -2402,10 +2404,12 @@ function initDiscBuffers(disc) {
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(disc.colours), GLContext.STATIC_DRAW);
 }
-function drawScene() {
+function refresh() {
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
     perspectiveMatrix = gl_matrix_1.mat4.create();
     perspectiveMatrix = gl_matrix_1.mat4.perspective(perspectiveMatrix, 0.698132, horizAspect, 0.1, 100.0);
+    orthoMatrix = gl_matrix_1.mat4.create();
+    orthoMatrix = gl_matrix_1.mat4.ortho(orthoMatrix, -1.0, 1.0, -1.0, 1.0, 0.1, 100.0);
     mvMatrix = gl_matrix_1.mat4.create();
     loadIdentity();
     var trans = gl_matrix_1.vec3.create();
@@ -2414,11 +2418,12 @@ function drawScene() {
     GLContext.vertexAttribPointer(vertexPositonAttribute, 3, GLContext.FLOAT, false, 0, 0);
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
     GLContext.vertexAttribPointer(vertexColourAttribute, 4, GLContext.FLOAT, false, 0, 0);
-    setMatrixUniforms();
+    setMatrixUniforms(circleShaderProgram);
     GLContext.drawArrays(GLContext.TRIANGLE_FAN, 0, disc.vertices.length / 3);
 }
+exports.refresh = refresh;
 start();
-drawScene();
+refresh();
 
 
 /***/ }),
@@ -2462,11 +2467,11 @@ function HSVtoRGB(h, s, v) {
     };
 }
 var DiscClass = (function () {
-    function DiscClass(segments, centreCol) {
+    function DiscClass(segments, radius, centreCol) {
         this.centreColour = centreCol;
-        this.GenerateTriangleFan(segments);
+        this.GenerateTriangleFan(segments, radius);
     }
-    DiscClass.prototype.GenerateTriangleFan = function (segments) {
+    DiscClass.prototype.GenerateTriangleFan = function (segments, radius) {
         var thetaStep = 2 * Math.PI;
         var centreCol = this.centreColour;
         this.vertices = [];
@@ -2476,8 +2481,8 @@ var DiscClass = (function () {
         var vertex = { x: 0, y: 0, z: 0 };
         for (var s = 0; s <= segments; s++) {
             var theta = s / segments * thetaStep;
-            vertex.x = Math.cos(theta);
-            vertex.y = Math.sin(theta);
+            vertex.x = Math.cos(theta) * radius;
+            vertex.y = Math.sin(theta) * radius;
             vertex.z = 0.0;
             this.vertices.push(vertex.x, vertex.y, vertex.z);
             var rgb = HSVtoRGB(s / segments + 1, 1, 1);
