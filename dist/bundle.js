@@ -2308,8 +2308,15 @@ var mvMatrix;
 var perspectiveMatrix;
 var orthoMatrix;
 var circleShaderProgram;
-var vertexPositonAttribute;
-var vertexColourAttribute;
+var textureShaderProgram;
+var circleVertexPositonAttribute;
+var circleVertexColourAttribute;
+var waveformImgs;
+var waveformTextures;
+var waveformVertBuffer;
+var waveformTexCoordBuffer;
+var textureVertexPositionAttribute;
+var textureTexCoordAttribute;
 function loadIdentity() {
     mvMatrix = gl_matrix_1.mat4.identity(mvMatrix);
 }
@@ -2340,6 +2347,9 @@ function start() {
     disc = new disc_1.DiscClass(256, 0.9, { r: 1.0, g: 1.0, b: 1.0, a: 1.0 });
     initShaders();
     initDiscBuffers(disc);
+    waveformImgs = [];
+    waveformTextures = [];
+    initTextures();
 }
 function updateDisc(radius, centreColour) {
     if (radius == disc.radius) {
@@ -2370,10 +2380,28 @@ function initShaders() {
         console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(circleShaderProgram));
     }
     GLContext.useProgram(circleShaderProgram);
-    vertexPositonAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexPosition");
-    GLContext.enableVertexAttribArray(vertexPositonAttribute);
-    vertexColourAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexColour");
-    GLContext.enableVertexAttribArray(vertexColourAttribute);
+    circleVertexPositonAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexPosition");
+    GLContext.enableVertexAttribArray(circleVertexPositonAttribute);
+    circleVertexColourAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexColour");
+    GLContext.enableVertexAttribArray(circleVertexColourAttribute);
+    GLContext.useProgram(null);
+    var textureFragmentShader = getShader(GLContext, "texture-fs");
+    var textureVertexShader = getShader(GLContext, "texture-vs");
+    console.log(textureFragmentShader);
+    console.log(textureVertexShader);
+    textureShaderProgram = GLContext.createProgram();
+    GLContext.attachShader(textureShaderProgram, textureFragmentShader);
+    GLContext.attachShader(textureShaderProgram, textureVertexShader);
+    GLContext.linkProgram(textureShaderProgram);
+    if (!GLContext.getProgramParameter(textureShaderProgram, GLContext.LINK_STATUS)) {
+        console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(textureShaderProgram));
+    }
+    GLContext.useProgram(textureShaderProgram);
+    textureVertexPositionAttribute = GLContext.getAttribLocation(textureShaderProgram, "aVertexPosition");
+    GLContext.enableVertexAttribArray(textureVertexPositionAttribute);
+    textureTexCoordAttribute = GLContext.getAttribLocation(textureShaderProgram, "aTexCoord");
+    GLContext.enableVertexAttribArray(textureTexCoordAttribute);
+    GLContext.useProgram(null);
 }
 function getShader(gl, id, type) {
     if (type === void 0) { type = null; }
@@ -2382,6 +2410,7 @@ function getShader(gl, id, type) {
     var shader;
     shaderScript = document.getElementById(id);
     if (!shaderScript) {
+        alert("Cannot get shader by id");
         return null;
     }
     src = shaderScript.text;
@@ -2393,6 +2422,7 @@ function getShader(gl, id, type) {
             type = gl.VERTEX_SHADER;
         }
         else {
+            alert("Shader type not recognised");
             return null;
         }
     }
@@ -2416,8 +2446,28 @@ function initDiscBuffers(disc) {
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(disc.colours), GLContext.STATIC_DRAW);
 }
+function initTextures() {
+    var waveformImageSrcs = ["./images/jesus009.png", "./images/jesus015.png", "./images/jesus0097.png", "./images/jesus0125.png"];
+    var _loop_1 = function (i) {
+        waveformImgs.push(new Image());
+        waveformTextures.push(GLContext.createTexture());
+        waveformImgs[i].onload = function () { handleTextureLoad(waveformImgs[i], waveformTextures[i]); };
+        waveformImgs[i].src = waveformImageSrcs[i];
+    };
+    for (var i = 0; i < waveformImageSrcs.length; i++) {
+        _loop_1(i);
+    }
+}
+function handleTextureLoad(image, texture) {
+    GLContext.bindTexture(GLContext.TEXTURE_2D, texture);
+    GLContext.texImage2D(GLContext.TEXTURE_2D, 0, GLContext.RGBA, image.width, image.height, 0, GLContext.RGBA, GLContext.UNSIGNED_BYTE, image);
+    GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_MAG_FILTER, GLContext.LINEAR);
+    GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_MIN_FILTER, GLContext.LINEAR_MIPMAP_NEAREST);
+    GLContext.generateMipmap(GLContext.TEXTURE_2D);
+    GLContext.bindTexture(GLContext.TEXTURE_2D, null);
+}
 function refresh() {
-    GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
+    GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT | GLContext.STENCIL_BUFFER_BIT);
     perspectiveMatrix = gl_matrix_1.mat4.create();
     perspectiveMatrix = gl_matrix_1.mat4.perspective(perspectiveMatrix, 0.698132, horizAspect, 0.1, 100.0);
     orthoMatrix = gl_matrix_1.mat4.create();
@@ -2426,12 +2476,14 @@ function refresh() {
     loadIdentity();
     var trans = gl_matrix_1.vec3.create();
     mvTranslate(gl_matrix_1.vec3.set(trans, 0.0, 0.0, -3.0));
+    GLContext.useProgram(circleShaderProgram);
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discVertBuffer);
-    GLContext.vertexAttribPointer(vertexPositonAttribute, 3, GLContext.FLOAT, false, 0, 0);
+    GLContext.vertexAttribPointer(circleVertexPositonAttribute, 3, GLContext.FLOAT, false, 0, 0);
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
-    GLContext.vertexAttribPointer(vertexColourAttribute, 4, GLContext.FLOAT, false, 0, 0);
+    GLContext.vertexAttribPointer(circleVertexColourAttribute, 4, GLContext.FLOAT, false, 0, 0);
     setMatrixUniforms(circleShaderProgram);
     GLContext.drawArrays(GLContext.TRIANGLE_FAN, 0, disc.vertices.length / 3);
+    GLContext.useProgram(null);
 }
 exports.refresh = refresh;
 start();

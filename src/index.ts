@@ -10,8 +10,27 @@ let mvMatrix: mat4;
 let perspectiveMatrix: mat4;
 let orthoMatrix: mat4;
 let circleShaderProgram: WebGLProgram;
-let vertexPositonAttribute: number;
-let vertexColourAttribute: number;
+let textureShaderProgram: WebGLProgram;
+let circleVertexPositonAttribute: number;
+let circleVertexColourAttribute: number;
+let waveformImgs: HTMLImageElement[];
+let waveformTextures: WebGLTexture[];
+let waveformVertBuffer: WebGLBuffer;
+let waveformTexCoordBuffer: WebGLBuffer;
+let textureVertexPositionAttribute: number;
+let textureTexCoordAttribute: number;
+
+enum waveformDisplayType
+{
+    Stencil,
+    Image,
+    Disabled
+};
+interface waveformControls
+{
+    type: string; // "stencil", "image" or "disabled"
+}
+let waveformType: waveformDisplayType;
 
 // Some helper functions
 function loadIdentity()
@@ -62,6 +81,10 @@ function start()
     disc = new DiscClass(256, 0.9, {r:1.0, g:1.0, b:1.0, a:1.0});
     initShaders();
     initDiscBuffers(disc);
+
+    waveformImgs = [];
+    waveformTextures = [];
+    initTextures();
 }
 
 export function updateDisc(radius: number, centreColour: ColourRGBA)
@@ -78,6 +101,21 @@ export function updateDisc(radius: number, centreColour: ColourRGBA)
 }
 
 // Update waveform
+export function updateWaveform(controls: waveformControls)
+{
+    if(controls.type == "stencil")
+    {
+        waveformType = waveformDisplayType.Stencil;
+    }
+    else if(controls.type == "image")
+    {
+        waveformType = waveformDisplayType.Image;
+    }
+    else
+    {
+        waveformType = waveformDisplayType.Disabled;
+    }
+}
 
 // Update logo text
 
@@ -115,10 +153,38 @@ function initShaders()
 
     GLContext.useProgram(circleShaderProgram);
 
-    vertexPositonAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexPosition");
-    GLContext.enableVertexAttribArray(vertexPositonAttribute);
-    vertexColourAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexColour");
-    GLContext.enableVertexAttribArray(vertexColourAttribute);
+    circleVertexPositonAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexPosition");
+    GLContext.enableVertexAttribArray(circleVertexPositonAttribute);
+    circleVertexColourAttribute = GLContext.getAttribLocation(circleShaderProgram, "aVertexColour");
+    GLContext.enableVertexAttribArray(circleVertexColourAttribute);
+
+    GLContext.useProgram(null);
+
+    let textureFragmentShader: WebGLShader = getShader(GLContext, "texture-fs");
+    let textureVertexShader: WebGLShader = getShader(GLContext, "texture-vs");
+    console.log(textureFragmentShader);
+    console.log(textureVertexShader);
+
+    // Create the texture shader program
+    textureShaderProgram = GLContext.createProgram();
+    GLContext.attachShader(textureShaderProgram, textureFragmentShader);
+    GLContext.attachShader(textureShaderProgram, textureVertexShader);
+    GLContext.linkProgram(textureShaderProgram);
+
+    // If creating the shader program fails, alert
+    if(!GLContext.getProgramParameter(textureShaderProgram, GLContext.LINK_STATUS))
+    {
+        console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(textureShaderProgram));
+    }
+
+    GLContext.useProgram(textureShaderProgram);
+
+    textureVertexPositionAttribute = GLContext.getAttribLocation(textureShaderProgram, "aVertexPosition");
+    GLContext.enableVertexAttribArray(textureVertexPositionAttribute);
+    textureTexCoordAttribute = GLContext.getAttribLocation(textureShaderProgram, "aTexCoord");
+    GLContext.enableVertexAttribArray(textureTexCoordAttribute);
+
+    GLContext.useProgram(null);
 }
 
 function getShader(gl:WebGL2RenderingContext, id:string, type:number=null): WebGLShader
@@ -131,6 +197,7 @@ function getShader(gl:WebGL2RenderingContext, id:string, type:number=null): WebG
 
     if(!shaderScript)
     {
+        alert("Cannot get shader by id");
         return null;
     }
 
@@ -148,6 +215,7 @@ function getShader(gl:WebGL2RenderingContext, id:string, type:number=null): WebG
         }
         else
         {
+            alert("Shader type not recognised");
             return null;
         }
     }
@@ -179,9 +247,31 @@ function initDiscBuffers(disc: DiscClass)
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(disc.colours), GLContext.STATIC_DRAW);
 }
 
+function initTextures()
+{
+    let waveformImageSrcs = ["./images/jesus009.png", "./images/jesus015.png", "./images/jesus0097.png", "./images/jesus0125.png"];
+    for(let i = 0; i < waveformImageSrcs.length; i++)
+    {
+        waveformImgs.push(new Image());
+        waveformTextures.push(GLContext.createTexture());
+        waveformImgs[i].onload = function() { handleTextureLoad(waveformImgs[i], waveformTextures[i]); }
+        waveformImgs[i].src = waveformImageSrcs[i];
+    }
+}
+
+function handleTextureLoad(image: HTMLImageElement, texture: WebGLTexture)
+{
+    GLContext.bindTexture(GLContext.TEXTURE_2D, texture);
+    GLContext.texImage2D(GLContext.TEXTURE_2D, 0, GLContext.RGBA, image.width, image.height, 0, GLContext.RGBA, GLContext.UNSIGNED_BYTE, image);
+    GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_MAG_FILTER, GLContext.LINEAR);
+    GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_MIN_FILTER, GLContext.LINEAR_MIPMAP_NEAREST);
+    GLContext.generateMipmap(GLContext.TEXTURE_2D);
+    GLContext.bindTexture(GLContext.TEXTURE_2D, null);
+}
+
 export function refresh()
 {
-    GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
+    GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT | GLContext.STENCIL_BUFFER_BIT);
 
     perspectiveMatrix = mat4.create();
     perspectiveMatrix = mat4.perspective(perspectiveMatrix, 0.698132, horizAspect, 0.1, 100.0);
@@ -194,12 +284,17 @@ export function refresh()
     let trans: vec3 = vec3.create();
     mvTranslate(vec3.set(trans, 0.0, 0.0, -3.0));
 
+    
+
+    // Draw the Rainbow Disc
+    GLContext.useProgram(circleShaderProgram);
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discVertBuffer);
-    GLContext.vertexAttribPointer(vertexPositonAttribute, 3, GLContext.FLOAT, false, 0, 0);
+    GLContext.vertexAttribPointer(circleVertexPositonAttribute, 3, GLContext.FLOAT, false, 0, 0);
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
-    GLContext.vertexAttribPointer(vertexColourAttribute, 4, GLContext.FLOAT, false, 0, 0);
+    GLContext.vertexAttribPointer(circleVertexColourAttribute, 4, GLContext.FLOAT, false, 0, 0);
     setMatrixUniforms(circleShaderProgram);
     GLContext.drawArrays(GLContext.TRIANGLE_FAN, 0, disc.vertices.length/3);
+    GLContext.useProgram(null);
 }
 
 start();

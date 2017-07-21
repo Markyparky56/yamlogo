@@ -5,8 +5,8 @@ var controls =
     discRadius: 0.9,
     waveformEnabled: true,
     waveformStencil: true, // If false assume image-overlay
-    waveformImageSrcs: ["./images/jesus009.png", "./images/jesus015.png", "./images/jesus0097.png", "./images/jesus0125.png"],
-    waveformSelectedImage: 1, // 0-indexed
+    waveformImageSrcs: ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"],
+    waveformSelectedImage: 3, // 0-indexed
 
     // Control element references
     centreColourPicker: document.getElementById("centreColourPicker"),
@@ -69,8 +69,12 @@ $("#radiusSlider").slider
 controls.refresh = function()
 {
     // Update values
-    controls.discRadiusValueSpan.innerHTML = controls.discRadius;
+    this.discRadiusValueSpan.innerHTML = controls.discRadius;
+    this.waveformEnabled = waveformToggle.checked;
+    this.waveformStencil = waveformStencilToggle.checked;
+    this.waveformSelectedImage = document.querySelector("input[name='waveform']:checked").value;
     
     bundle.updateDisc(this.discRadius, this.centreColour)
+
     bundle.refresh();
 }

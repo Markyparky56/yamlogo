@@ -27,3 +27,42 @@ body
 {
     width: 300px;
 }
+
+.waveformSelector input
+{
+    position: absolute;
+    z-index: 999;
+}
+
+.waveformSelector input:active + .waveformSelectable
+{
+    opacity: 0.9;
+}
+
+.waveformSelector input:checked + .waveformSelectable
+{
+    filter: none;
+}
+
+.waveform009{background-image: url(./images/jesus009.png);}
+.waveform015{background-image: url(./images/jesus015.png);}
+.waveform0097{background-image: url(./images/jesus0097.png);}
+.waveform0125{background-image: url(./images/jesus0125.png);}
+
+.waveformSelectable
+{
+    cursor: pointer;
+    background-size: contain;
+    background-repeat: no-repeat;
+    display: inline-block;
+    width: 128px;
+    height: 128px;
+    transition: all 100ms ease-in;
+    filter: brightness(1.8) grayscale(1) opacity(.7)
+
+}
+
+.waveformSelectable:hover
+{
+    filter: brightness(1.2) grayscale(.5) opacity(.9)
+}
