@@ -22,9 +22,20 @@ $("#centreColourPicker").spectrum
     flat: true,
     showInput: true,
     color: "#fff",
-    showAlpha:true,
+    showAlpha: true,
+    showButtons: false,
     preferredFormat: "rgb",
     move: function(color)
+    {
+        controls.centreColour = { 
+            r: color._r/255, 
+            g: color._g/255, 
+            b: color._b/255, 
+            a: color._a // Alpha does not need normalised
+        };
+        controls.refresh();
+    },
+    change: function(color)
     {
         controls.centreColour = { 
             r: color._r/255, 
