@@ -2342,7 +2342,13 @@ function start() {
     initDiscBuffers(disc);
 }
 function updateDisc(radius, centreColour) {
-    disc = new disc_1.DiscClass(256, radius, centreColour);
+    if (radius == disc.radius) {
+        disc.UpdateCentreColour(centreColour);
+    }
+    else {
+        disc = new disc_1.DiscClass(360, radius, centreColour);
+    }
+    initDiscBuffers(disc);
 }
 exports.updateDisc = updateDisc;
 function initWebGL(canvas) {
@@ -2401,8 +2407,10 @@ function getShader(gl, id, type) {
     return shader;
 }
 function initDiscBuffers(disc) {
-    discVertBuffer = GLContext.createBuffer();
-    discColourBuffer = GLContext.createBuffer();
+    if (discVertBuffer === undefined)
+        discVertBuffer = GLContext.createBuffer();
+    if (discColourBuffer === undefined)
+        discColourBuffer = GLContext.createBuffer();
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discVertBuffer);
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(disc.vertices), GLContext.STATIC_DRAW);
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
@@ -2472,6 +2480,7 @@ function HSVtoRGB(h, s, v) {
 }
 var DiscClass = (function () {
     function DiscClass(segments, radius, centreCol) {
+        this.radius = radius;
         this.centreColour = centreCol;
         this.GenerateTriangleFan(segments, radius);
     }
@@ -2492,6 +2501,13 @@ var DiscClass = (function () {
             var rgb = HSVtoRGB(s / segments + 1, 1, 1);
             this.colours.push(rgb.r / 255, rgb.g / 255, rgb.b / 255, 1.0);
         }
+    };
+    DiscClass.prototype.UpdateCentreColour = function (centreCol) {
+        this.centreColour = centreCol;
+        this.colours[0] = centreCol.r;
+        this.colours[1] = centreCol.g;
+        this.colours[2] = centreCol.b;
+        this.colours[3] = centreCol.a;
     };
     return DiscClass;
 }());

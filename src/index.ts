@@ -60,14 +60,21 @@ function start()
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
 
     disc = new DiscClass(256, 0.9, {r:1.0, g:1.0, b:1.0, a:1.0});
-
     initShaders();
     initDiscBuffers(disc);
 }
 
 export function updateDisc(radius: number, centreColour: ColourRGBA)
 {
-    disc = new DiscClass(256, radius, centreColour);
+    if(radius == disc.radius) // No need to regenerate all the triangles
+    {
+        disc.UpdateCentreColour(centreColour);
+    }
+    else
+    {
+        disc = new DiscClass(360, radius, centreColour);
+    }
+    initDiscBuffers(disc);
 }
 
 // Update waveform
@@ -162,8 +169,8 @@ function getShader(gl:WebGL2RenderingContext, id:string, type:number=null): WebG
 
 function initDiscBuffers(disc: DiscClass)
 {
-    discVertBuffer = GLContext.createBuffer();
-    discColourBuffer = GLContext.createBuffer();
+    if(discVertBuffer === undefined) discVertBuffer = GLContext.createBuffer();
+    if(discColourBuffer === undefined) discColourBuffer = GLContext.createBuffer();
 
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discVertBuffer);
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(disc.vertices), GLContext.STATIC_DRAW);

@@ -42,6 +42,7 @@ export class DiscClass
     public vertices: number[];
     public colours: number[];
     public centreColour: ColourRGBA;
+    public radius: number;
 
     private GenerateTriangleFan(segments: number, radius: number)
     {
@@ -70,9 +71,19 @@ export class DiscClass
             this.colours.push(rgb.r/255, rgb.g/255, rgb.b/255, 1.0);
         }
     }
+
+    public UpdateCentreColour(centreCol: ColourRGBA)
+    {
+        this.centreColour = centreCol;
+        this.colours[0] = centreCol.r;
+        this.colours[1] = centreCol.g;
+        this.colours[2] = centreCol.b;
+        this.colours[3] = centreCol.a;
+    }
     
     constructor(segments: number, radius: number, centreCol: ColourRGBA)
     {
+        this.radius = radius;
         this.centreColour = centreCol;
         this.GenerateTriangleFan(segments, radius);
     }

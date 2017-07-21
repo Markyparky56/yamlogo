@@ -22,3 +22,8 @@ body
     order: 1;
     flex-basis: 40%;
 }
+
+#radiusSlider
+{
+    width: 300px;
+}

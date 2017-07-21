@@ -6,6 +6,7 @@
         <meta name="author" content="Mark A. Ropper">
         <link rel="stylesheet" type="text/css" href="yamlogo.css">
         <link rel="stylesheet" type="text/css" href="spectrum.css">
+        <link rel="stylesheet" type="text/css" href="jquery-ui.css">
         <!--WebGL Shaders-->
         <script id="circle-vs" type="x-shader/x-vertex">#version 300 es
             in vec3 aVertexPosition;
@@ -31,7 +32,8 @@
                 outColour = vColour;
             }
         </script>
-        <script src="https://code.jquery.com/jquery-3.2.1.min.js" type="text/javascript" async></script>
+        <script src="https://code.jquery.com/jquery-3.2.1.min.js" type="text/javascript"></script>
+        <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" type="text/javascript"></script>
         <script src="spectrum.js" type="text/javascript"></script>
     </head>
 
@@ -45,9 +47,14 @@
             </div>
 
             <div id="controls">
-                Centre Colour
-                <input type="text" id="centreColourPicker">
-
+                <div id="colourControls">
+                    Centre Colour<br>
+                    <input type="text" id="centreColourPicker">
+                </div>
+                <div id="radiusControls">
+                    Disc Radius:<span id="radiusValue">0.9</span><br>
+                    <div id="radiusSlider"></div>
+                </div>
                 <script src="controls.js"></script>
             </div>
         </div>
