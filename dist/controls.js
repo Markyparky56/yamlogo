@@ -73,8 +73,12 @@ controls.refresh = function()
     this.waveformEnabled = waveformToggle.checked;
     this.waveformStencil = waveformStencilToggle.checked;
     this.waveformSelectedImage = document.querySelector("input[name='waveform']:checked").value;
-    
+
     bundle.updateDisc(this.discRadius, this.centreColour)
+    bundle.updateWaveform({
+        "type": ((this.waveformEnabled) ? ((this.waveformStencil) ? "stencil" : "image") : "disabled"),
+        "textureNum": this.waveformSelectedImage
+    });
 
     bundle.refresh();
 }

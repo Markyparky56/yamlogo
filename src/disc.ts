@@ -1,3 +1,5 @@
+import {Vertex, ColourRGBA} from "./interfaces"
+
 function HSVtoRGB(h:number,s:number,v:number)
 {
     let r, g, b, i, f, p, q, t;
@@ -20,21 +22,6 @@ function HSVtoRGB(h:number,s:number,v:number)
         g: Math.round(g * 255),
         b: Math.round(b * 255)
     };
-}
-
-export interface Vertex
-{
-    x: number;
-    y: number;
-    z: number;
-}
-
-export interface ColourRGBA
-{
-    r: number;
-    g: number;
-    b: number;
-    a: number;
 }
 
 export class DiscClass

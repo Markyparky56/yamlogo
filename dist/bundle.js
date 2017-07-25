@@ -2298,7 +2298,8 @@ module.exports = vec4;
 
 exports.__esModule = true;
 var disc_1 = __webpack_require__(5);
-var gl_matrix_1 = __webpack_require__(6);
+var square_1 = __webpack_require__(6);
+var gl_matrix_1 = __webpack_require__(7);
 var GLContext;
 var horizAspect = 1024.0 / 1024.0;
 var disc;
@@ -2309,14 +2310,28 @@ var perspectiveMatrix;
 var orthoMatrix;
 var circleShaderProgram;
 var textureShaderProgram;
+var stencilTextureShaderProgram;
 var circleVertexPositonAttribute;
 var circleVertexColourAttribute;
 var waveformImgs;
 var waveformTextures;
+var waveformTexturesLoaded;
 var waveformVertBuffer;
 var waveformTexCoordBuffer;
+var stencilTextureVertexPositionAttribute;
+var stencilTextureTexCoordAttribute;
 var textureVertexPositionAttribute;
 var textureTexCoordAttribute;
+var waveformSquare;
+var selectedWaveformTexture;
+var waveformDisplayType;
+(function (waveformDisplayType) {
+    waveformDisplayType[waveformDisplayType["Stencil"] = 0] = "Stencil";
+    waveformDisplayType[waveformDisplayType["Image"] = 1] = "Image";
+    waveformDisplayType[waveformDisplayType["Disabled"] = 2] = "Disabled";
+})(waveformDisplayType || (waveformDisplayType = {}));
+;
+var waveformType;
 function loadIdentity() {
     mvMatrix = gl_matrix_1.mat4.identity(mvMatrix);
 }
@@ -2342,14 +2357,19 @@ function start() {
     GLContext.enable(GLContext.DEPTH_TEST);
     GLContext.enable(GLContext.BLEND);
     GLContext.depthFunc(GLContext.LEQUAL);
-    GLContext.blendFunc(GLContext.SRC_ALPHA, GLContext.ONE);
+    GLContext.blendFunc(GLContext.SRC_ALPHA, GLContext.ONE_MINUS_SRC_ALPHA);
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
     disc = new disc_1.DiscClass(256, 0.9, { r: 1.0, g: 1.0, b: 1.0, a: 1.0 });
     initShaders();
     initDiscBuffers(disc);
     waveformImgs = [];
     waveformTextures = [];
+    waveformTexturesLoaded = [];
+    waveformSquare = new square_1.SquareClass;
+    waveformType = waveformDisplayType.Stencil;
+    selectedWaveformTexture = 3;
     initTextures();
+    initSquareBuffers(waveformSquare);
 }
 function updateDisc(radius, centreColour) {
     if (radius == disc.radius) {
@@ -2361,9 +2381,26 @@ function updateDisc(radius, centreColour) {
     initDiscBuffers(disc);
 }
 exports.updateDisc = updateDisc;
+function updateWaveform(controls) {
+    if (controls.type == "stencil") {
+        waveformType = waveformDisplayType.Stencil;
+    }
+    else if (controls.type == "image") {
+        waveformType = waveformDisplayType.Image;
+    }
+    else {
+        waveformType = waveformDisplayType.Disabled;
+    }
+    selectedWaveformTexture = controls.textureNum;
+}
+exports.updateWaveform = updateWaveform;
 function initWebGL(canvas) {
     var gl = null;
-    gl = canvas.getContext("webgl2");
+    gl = canvas.getContext("webgl2", { antialias: true,
+        depth: true,
+        alpha: true,
+        stencil: true,
+        premultipliedAlpha: true });
     if (!gl) {
         alert("Unable to initialise WebGL, your browser may not support it. :(");
     }
@@ -2387,8 +2424,6 @@ function initShaders() {
     GLContext.useProgram(null);
     var textureFragmentShader = getShader(GLContext, "texture-fs");
     var textureVertexShader = getShader(GLContext, "texture-vs");
-    console.log(textureFragmentShader);
-    console.log(textureVertexShader);
     textureShaderProgram = GLContext.createProgram();
     GLContext.attachShader(textureShaderProgram, textureFragmentShader);
     GLContext.attachShader(textureShaderProgram, textureVertexShader);
@@ -2401,6 +2436,21 @@ function initShaders() {
     GLContext.enableVertexAttribArray(textureVertexPositionAttribute);
     textureTexCoordAttribute = GLContext.getAttribLocation(textureShaderProgram, "aTexCoord");
     GLContext.enableVertexAttribArray(textureTexCoordAttribute);
+    GLContext.useProgram(null);
+    var stencilTextureFragmentShader = getShader(GLContext, "stenciltexture-fs");
+    var stencilTextureVertexShader = getShader(GLContext, "stenciltexture-vs");
+    stencilTextureShaderProgram = GLContext.createProgram();
+    GLContext.attachShader(stencilTextureShaderProgram, stencilTextureFragmentShader);
+    GLContext.attachShader(stencilTextureShaderProgram, stencilTextureVertexShader);
+    GLContext.linkProgram(stencilTextureShaderProgram);
+    if (!GLContext.getProgramParameter(stencilTextureShaderProgram, GLContext.LINK_STATUS)) {
+        console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(stencilTextureShaderProgram));
+    }
+    GLContext.useProgram(stencilTextureShaderProgram);
+    stencilTextureVertexPositionAttribute = GLContext.getAttribLocation(stencilTextureShaderProgram, "aVertexPosition");
+    GLContext.enableVertexAttribArray(stencilTextureVertexPositionAttribute);
+    stencilTextureTexCoordAttribute = GLContext.getAttribLocation(stencilTextureShaderProgram, "aTexCoord");
+    GLContext.enableVertexAttribArray(stencilTextureTexCoordAttribute);
     GLContext.useProgram(null);
 }
 function getShader(gl, id, type) {
@@ -2446,27 +2496,97 @@ function initDiscBuffers(disc) {
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(disc.colours), GLContext.STATIC_DRAW);
 }
+function initSquareBuffers(square) {
+    if (waveformVertBuffer === undefined)
+        waveformVertBuffer = GLContext.createBuffer();
+    if (waveformTexCoordBuffer === undefined)
+        waveformTexCoordBuffer = GLContext.createBuffer();
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, waveformVertBuffer);
+    GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.vertices), GLContext.STATIC_DRAW);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, waveformTexCoordBuffer);
+    GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.texCoords), GLContext.STATIC_DRAW);
+}
 function initTextures() {
-    var waveformImageSrcs = ["./images/jesus009.png", "./images/jesus015.png", "./images/jesus0097.png", "./images/jesus0125.png"];
+    var waveformImageSrcs = ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"];
     var _loop_1 = function (i) {
         waveformImgs.push(new Image());
         waveformTextures.push(GLContext.createTexture());
-        waveformImgs[i].onload = function () { handleTextureLoad(waveformImgs[i], waveformTextures[i]); };
+        waveformImgs[i].onload = function () { handleTextureLoad(waveformImgs[i], waveformTextures[i], i); };
         waveformImgs[i].src = waveformImageSrcs[i];
+        waveformTexturesLoaded.push(false);
     };
     for (var i = 0; i < waveformImageSrcs.length; i++) {
         _loop_1(i);
     }
 }
-function handleTextureLoad(image, texture) {
+function handleTextureLoad(image, texture, num) {
     GLContext.bindTexture(GLContext.TEXTURE_2D, texture);
     GLContext.texImage2D(GLContext.TEXTURE_2D, 0, GLContext.RGBA, image.width, image.height, 0, GLContext.RGBA, GLContext.UNSIGNED_BYTE, image);
     GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_MAG_FILTER, GLContext.LINEAR);
     GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_MIN_FILTER, GLContext.LINEAR_MIPMAP_NEAREST);
+    GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_WRAP_S, GLContext.CLAMP_TO_EDGE);
+    GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_WRAP_T, GLContext.CLAMP_TO_EDGE);
     GLContext.generateMipmap(GLContext.TEXTURE_2D);
     GLContext.bindTexture(GLContext.TEXTURE_2D, null);
+    waveformTexturesLoaded[num] = true;
+    console.log("Texture " + num + " loaded");
+}
+function drawRainbowDisc() {
+    if (waveformType == waveformDisplayType.Stencil) {
+        GLContext.stencilMask(0xFF);
+        GLContext.stencilFunc(GLContext.EQUAL, 1, 0xFF);
+    }
+    GLContext.useProgram(circleShaderProgram);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discVertBuffer);
+    GLContext.vertexAttribPointer(circleVertexPositonAttribute, 3, GLContext.FLOAT, false, 0, 0);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
+    GLContext.vertexAttribPointer(circleVertexColourAttribute, 4, GLContext.FLOAT, false, 0, 0);
+    setMatrixUniforms(circleShaderProgram);
+    GLContext.drawArrays(GLContext.TRIANGLE_FAN, 0, disc.vertices.length / 3);
+    GLContext.useProgram(null);
+    if (waveformType == waveformDisplayType.Stencil) {
+        GLContext.stencilMask(0x00);
+    }
+}
+function drawStencilWaveform() {
+    GLContext.enable(GLContext.STENCIL_TEST);
+    GLContext.colorMask(false, false, false, false);
+    GLContext.depthMask(false);
+    GLContext.stencilFunc(GLContext.ALWAYS, 1, 0xFF);
+    GLContext.stencilOp(GLContext.REPLACE, GLContext.REPLACE, GLContext.REPLACE);
+    GLContext.stencilMask(0xFF);
+    GLContext.useProgram(stencilTextureShaderProgram);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, waveformVertBuffer);
+    GLContext.vertexAttribPointer(stencilTextureVertexPositionAttribute, 3, GLContext.FLOAT, false, 0, 0);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, waveformTexCoordBuffer);
+    GLContext.vertexAttribPointer(stencilTextureTexCoordAttribute, 2, GLContext.FLOAT, false, 0, 0);
+    GLContext.activeTexture(GLContext.TEXTURE0);
+    GLContext.bindTexture(GLContext.TEXTURE_2D, waveformTextures[selectedWaveformTexture]);
+    GLContext.uniform1i(GLContext.getUniformLocation(stencilTextureShaderProgram, "tex"), 0);
+    setMatrixUniforms(stencilTextureShaderProgram);
+    GLContext.drawArrays(GLContext.TRIANGLE_STRIP, 0, waveformSquare.vertices.length / 3);
+    GLContext.useProgram(null);
+    GLContext.colorMask(true, true, true, true);
+    GLContext.depthMask(true);
+    GLContext.stencilMask(0x00);
+    GLContext.stencilFunc(GLContext.EQUAL, 1, 0xFF);
+    GLContext.stencilOp(GLContext.KEEP, GLContext.KEEP, GLContext.KEEP);
+}
+function drawImageWaveform() {
+    GLContext.useProgram(textureShaderProgram);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, waveformVertBuffer);
+    GLContext.vertexAttribPointer(textureVertexPositionAttribute, 3, GLContext.FLOAT, false, 0, 0);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, waveformTexCoordBuffer);
+    GLContext.vertexAttribPointer(textureTexCoordAttribute, 2, GLContext.FLOAT, false, 0, 0);
+    GLContext.activeTexture(GLContext.TEXTURE0);
+    GLContext.bindTexture(GLContext.TEXTURE_2D, waveformTextures[selectedWaveformTexture]);
+    GLContext.uniform1i(GLContext.getUniformLocation(textureShaderProgram, "tex"), 0);
+    setMatrixUniforms(textureShaderProgram);
+    GLContext.drawArrays(GLContext.TRIANGLE_STRIP, 0, waveformSquare.vertices.length / 3);
+    GLContext.useProgram(null);
 }
 function refresh() {
+    console.log({ "waveformType": waveformType });
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT | GLContext.STENCIL_BUFFER_BIT);
     perspectiveMatrix = gl_matrix_1.mat4.create();
     perspectiveMatrix = gl_matrix_1.mat4.perspective(perspectiveMatrix, 0.698132, horizAspect, 0.1, 100.0);
@@ -2476,18 +2596,30 @@ function refresh() {
     loadIdentity();
     var trans = gl_matrix_1.vec3.create();
     mvTranslate(gl_matrix_1.vec3.set(trans, 0.0, 0.0, -3.0));
-    GLContext.useProgram(circleShaderProgram);
-    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discVertBuffer);
-    GLContext.vertexAttribPointer(circleVertexPositonAttribute, 3, GLContext.FLOAT, false, 0, 0);
-    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, discColourBuffer);
-    GLContext.vertexAttribPointer(circleVertexColourAttribute, 4, GLContext.FLOAT, false, 0, 0);
-    setMatrixUniforms(circleShaderProgram);
-    GLContext.drawArrays(GLContext.TRIANGLE_FAN, 0, disc.vertices.length / 3);
-    GLContext.useProgram(null);
+    if (waveformType == waveformDisplayType.Stencil) {
+        drawStencilWaveform();
+    }
+    drawRainbowDisc();
+    if (waveformType == waveformDisplayType.Stencil) {
+        GLContext.clear(GLContext.STENCIL_BUFFER_BIT);
+        GLContext.disable(GLContext.STENCIL_TEST);
+    }
+    if (waveformType == waveformDisplayType.Image) {
+        drawImageWaveform();
+    }
 }
 exports.refresh = refresh;
 start();
-refresh();
+function imagesReadyCheck() {
+    var ready = true;
+    waveformTexturesLoaded.forEach(function (item) { ready = item; });
+    if (ready) {
+        console.log("All textures loaded!");
+        clearInterval(readyCheck);
+        refresh();
+    }
+}
+var readyCheck = setInterval(function () { imagesReadyCheck(); }, 1000 / 60);
 
 
 /***/ }),
@@ -2570,6 +2702,33 @@ exports.DiscClass = DiscClass;
 /* 6 */
 /***/ (function(module, exports, __webpack_require__) {
 
+"use strict";
+
+exports.__esModule = true;
+var SquareClass = (function () {
+    function SquareClass() {
+        this.vertices = [
+            -1.0, 1.0, 0.0,
+            1.0, 1.0, 0.0,
+            -1.0, -1.0, 0.0,
+            1.0, -1.0, 0.0,
+        ];
+        this.texCoords = [
+            0.0, 0.0,
+            1.0, 0.0,
+            0.0, 1.0,
+            1.0, 1.0
+        ];
+    }
+    return SquareClass;
+}());
+exports.SquareClass = SquareClass;
+
+
+/***/ }),
+/* 7 */
+/***/ (function(module, exports, __webpack_require__) {
+
 /**
  * @fileoverview gl-matrix - High performance matrix and vector operations
  * @author Brandon Jones
@@ -2599,17 +2758,17 @@ THE SOFTWARE. */
 // END HEADER
 
 exports.glMatrix = __webpack_require__(0);
-exports.mat2 = __webpack_require__(7);
-exports.mat2d = __webpack_require__(8);
+exports.mat2 = __webpack_require__(8);
+exports.mat2d = __webpack_require__(9);
 exports.mat3 = __webpack_require__(1);
-exports.mat4 = __webpack_require__(9);
-exports.quat = __webpack_require__(10);
-exports.vec2 = __webpack_require__(11);
+exports.mat4 = __webpack_require__(10);
+exports.quat = __webpack_require__(11);
+exports.vec2 = __webpack_require__(12);
 exports.vec3 = __webpack_require__(2);
 exports.vec4 = __webpack_require__(3);
 
 /***/ }),
-/* 7 */
+/* 8 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
@@ -3051,7 +3210,7 @@ module.exports = mat2;
 
 
 /***/ }),
-/* 8 */
+/* 9 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
@@ -3526,7 +3685,7 @@ module.exports = mat2d;
 
 
 /***/ }),
-/* 9 */
+/* 10 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
@@ -5668,7 +5827,7 @@ module.exports = mat4;
 
 
 /***/ }),
-/* 10 */
+/* 11 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.
@@ -6274,7 +6433,7 @@ module.exports = quat;
 
 
 /***/ }),
-/* 11 */
+/* 12 */
 /***/ (function(module, exports, __webpack_require__) {
 
 /* Copyright (c) 2015, Brandon Jones, Colin MacKenzie IV.

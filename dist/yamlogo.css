@@ -15,12 +15,13 @@ body
 #logoCanvas
 {
     order: 0;
+    background: black; /*Required to get past the Canvas compositing with alpha blending*/
 }
 
 #controls
 {
     order: 1;
-    flex-basis: 40%;
+    flex-basis: content;
 }
 
 #radiusSlider
@@ -44,8 +45,8 @@ body
     filter: none;
 }
 
-.waveform009{background-image: url(./images/jesus009.png);}
-.waveform015{background-image: url(./images/jesus015.png);}
+.waveform009 {background-image: url(./images/jesus009.png); }
+.waveform015 {background-image: url(./images/jesus015.png); }
 .waveform0097{background-image: url(./images/jesus0097.png);}
 .waveform0125{background-image: url(./images/jesus0125.png);}
 
@@ -58,11 +59,10 @@ body
     width: 128px;
     height: 128px;
     transition: all 100ms ease-in;
-    filter: brightness(1.8) grayscale(1) opacity(.7)
-
+    filter: brightness(1.8) grayscale(1) opacity(.7);
 }
 
 .waveformSelectable:hover
 {
-    filter: brightness(1.2) grayscale(.5) opacity(.9)
+    filter: brightness(1.2) grayscale(.5) opacity(.9);
 }

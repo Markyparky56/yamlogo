@@ -35,6 +35,38 @@
                 outColour = vColour;
             }
         </script>
+        <script id="stenciltexture-vs" type="x-shader/x-vertex">#version 300 es
+            in vec3 aVertexPosition;
+            in vec2 aTexCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+
+            out vec2 vTexCoord;
+
+            void main(void)
+            {
+                gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vTexCoord = aTexCoord;
+            }
+        </script>
+        <script id="stenciltexture-fs" type="x-shader/x-fragment">#version 300 es
+            uniform sampler2D tex;
+            
+            precision highp float;
+            in vec2 vTexCoord;
+
+            out vec4 outColour;
+
+            void main(void)
+            {
+                outColour = texture(tex, vTexCoord);
+                if(outColour.a > 0.25)
+                {
+                    discard;
+                }               
+            }
+        </script>
         <script id="texture-vs" type="x-shader/x-vertex">#version 300 es
             in vec3 aVertexPosition;
             in vec2 aTexCoord;
@@ -59,8 +91,12 @@
             out vec4 outColour;
 
             void main(void)
-            {
+            {                
                 outColour = texture(tex, vTexCoord);
+                if(outColour.a < 0.25)
+                {
+                    discard;
+                }
             }
         </script>
 
@@ -91,9 +127,9 @@
                 <br>
                 <div id="waveformControls">
                     Waveform Enabled:
-                    <input id="waveformToggle" type="checkbox" checked="checked"><br>
+                    <input id="waveformToggle" type="checkbox" checked="checked" onchange="controls.refresh()"><br>
                     Waveform <i>As Stencil</i> Enabled:
-                    <input id="waveformStencilToggle" type="checkbox" checked="checked">
+                    <input id="waveformStencilToggle" type="checkbox" checked="checked" onchange="controls.refresh()">
                     <br>
                     Selected Waveform:
                     <br>
