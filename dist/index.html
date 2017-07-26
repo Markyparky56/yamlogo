@@ -41,27 +41,31 @@
 
             uniform mat4 uMVMatrix;
             uniform mat4 uPMatrix;
-
+            
             out vec2 vTexCoord;
 
             void main(void)
             {
                 gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
-                vTexCoord = aTexCoord;
+                vTexCoord = aTexCoord;                
             }
         </script>
         <script id="stenciltexture-fs" type="x-shader/x-fragment">#version 300 es
-            uniform sampler2D tex;
-            
             precision highp float;
-            in vec2 vTexCoord;
+            
+            uniform sampler2D tex;
+            uniform int uInvert;
+            uniform float uAlphaThreshold; // If you want a rainbow waveform set to true           
+            
+            in vec2 vTexCoord;                        
 
             out vec4 outColour;
 
             void main(void)
             {
                 outColour = texture(tex, vTexCoord);
-                if(outColour.a > 0.25)
+                if((outColour.a > uAlphaThreshold && uInvert == 0)
+                || (outColour.a < uAlphaThreshold && uInvert > 0))
                 {
                     discard;
                 }               
@@ -93,10 +97,10 @@
             void main(void)
             {                
                 outColour = texture(tex, vTexCoord);
-                if(outColour.a < 0.25)
+                /*if(outColour.a < 0.25)
                 {
                     discard;
-                }
+                }*/
             }
         </script>
 
@@ -127,9 +131,17 @@
                 <br>
                 <div id="waveformControls">
                     Waveform Enabled:
-                    <input id="waveformToggle" type="checkbox" checked="checked" onchange="controls.refresh()"><br>
+                    <input id="waveformToggle" type="checkbox" checked="checked" onchange="controls.refresh()">
+                    <br>
                     Waveform <i>As Stencil</i> Enabled:
                     <input id="waveformStencilToggle" type="checkbox" checked="checked" onchange="controls.refresh()">
+                    Invert stencil:
+                    <input id="waveformStencilInvertToggle" type="checkbox" onchange="controls.refresh()">
+                    <br>
+                    <div id="stencilAlphaSlider">
+                        Stencil Alpha Threshold:<span id="stencilAlphaThresholdValue">0.25</span><br>
+                        <div id="stencilAlphaThresholdSlider"></div>
+                    </div>
                     <br>
                     Selected Waveform:
                     <br>
@@ -143,6 +155,8 @@
                         <input id="jesus015" type="radio" name="waveform" value="3" checked="checked" onchange="controls.refresh()">
                         <label class="waveformSelectable waveform015" for="jesus015"></label>                        
                     </div>
+                    <br>
+                    
                 </div>
 
                 <script src="controls.js"></script>

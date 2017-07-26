@@ -23,6 +23,8 @@ let waveformVertBuffer: WebGLBuffer;
 let waveformTexCoordBuffer: WebGLBuffer;
 let stencilTextureVertexPositionAttribute: number;
 let stencilTextureTexCoordAttribute: number;
+let stencilTextureInvert: number; // Can't have booleans, so treat non-zero values as true
+let stencilTextureAlphaThreshold: number;
 let textureVertexPositionAttribute: number;
 let textureTexCoordAttribute: number;
 let waveformSquare: SquareClass;
@@ -38,6 +40,8 @@ interface waveformControls
 {
     type: string; // "stencil", "image" or "disabled"
     textureNum: number; // 0-3
+    invert: boolean;
+    alphaThreshold: number;
 }
 let waveformType: waveformDisplayType;
 
@@ -65,6 +69,21 @@ function setMatrixUniforms(shaderProgram: WebGLProgram)
 
     let mvUniform = GLContext.getUniformLocation(shaderProgram, "uMVMatrix");
     GLContext.uniformMatrix4fv(mvUniform, false, mvMatrix);
+}
+
+function setStencilTextureShaderUniforms()
+{
+    let invertLoc = GLContext.getUniformLocation(stencilTextureShaderProgram, "uInvert");
+    GLContext.uniform1i(invertLoc, stencilTextureInvert);
+
+    let alphaThresholdLoc = GLContext.getUniformLocation(stencilTextureShaderProgram, "uAlphaThreshold");
+    GLContext.uniform1f(alphaThresholdLoc, stencilTextureAlphaThreshold);
+    // console.log({
+    //     "invertLoc": invertLoc, 
+    //     "invert": stencilTextureInvert, 
+    //     "alphaThresholdLoc": alphaThresholdLoc, 
+    //     "stencilTextureAlphaThreshold": stencilTextureAlphaThreshold
+    // });
 }
 
 function start()
@@ -97,6 +116,8 @@ function start()
     waveformSquare = new SquareClass;
     waveformType = waveformDisplayType.Stencil;
     selectedWaveformTexture = 3;
+    stencilTextureInvert = 0.0;
+    stencilTextureAlphaThreshold = 0.25;
     initTextures();
     initSquareBuffers(waveformSquare);
 }
@@ -130,6 +151,15 @@ export function updateWaveform(controls: waveformControls)
         waveformType = waveformDisplayType.Disabled;
     }
     selectedWaveformTexture = controls.textureNum;
+    if(controls.invert)
+    {
+        stencilTextureInvert = 1.0;
+    }
+    else
+    {
+        stencilTextureInvert = 0.0;
+    }
+    stencilTextureAlphaThreshold = controls.alphaThreshold;    
 }
 
 // Update logo text
@@ -375,6 +405,8 @@ function drawStencilWaveform()
     GLContext.uniform1i(GLContext.getUniformLocation(stencilTextureShaderProgram, "tex"), 0);
     
     setMatrixUniforms(stencilTextureShaderProgram);
+    setStencilTextureShaderUniforms();
+
     GLContext.drawArrays(GLContext.TRIANGLE_STRIP, 0, waveformSquare.vertices.length/3);
     GLContext.useProgram(null);
 
@@ -403,7 +435,7 @@ function drawImageWaveform()
 
 export function refresh()
 {
-    console.log( {"waveformType": waveformType} )
+    //console.log( {"waveformType": waveformType} )
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT | GLContext.STENCIL_BUFFER_BIT);
 
     perspectiveMatrix = mat4.create();

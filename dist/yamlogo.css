@@ -29,6 +29,11 @@ body
     width: 300px;
 }
 
+#stencilAlphaSlider
+{
+    width: 300px;
+}
+
 .waveformSelector input
 {
     position: absolute;

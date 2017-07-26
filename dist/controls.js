@@ -7,14 +7,17 @@ var controls =
     waveformStencil: true, // If false assume image-overlay
     waveformImageSrcs: ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"],
     waveformSelectedImage: 3, // 0-indexed
+    waveformStencilInvert: false,
+    waveformStencilAlphaThreshold: 0.25,
 
     // Control element references
     centreColourPicker: document.getElementById("centreColourPicker"),
-    discRadiusSlider: document.getElementById("discRadiusSlider"),
     discRadiusValueSpan: document.getElementById("radiusValue"),
     waveformToggle: document.getElementById("waveformToggle"),
     waveformStencilToggle: document.getElementById("waveformStencilToggle"),
-    waveformSelector: document.getElementById("waveformSelector")
+    waveformSelector: document.getElementById("waveformSelector"),
+    waveformStencilInvertToggle: document.getElementById("waveformStencilInvertToggle"),
+    waveformStencilAlphaThresholdValueSpan: document.getElementById("stencilAlphaThresholdValue")
 };
 
 $("#centreColourPicker").spectrum
@@ -66,18 +69,41 @@ $("#radiusSlider").slider
     },
 });
 
+$("#stencilAlphaThresholdSlider").slider
+({
+    orientation: "horizontal",
+    max: 1.0,
+    min: 0.0,
+    step: 0.001,
+    value: 0.25,
+    slide: function()
+    {
+        controls.waveformStencilAlphaThreshold = $("#stencilAlphaThresholdSlider").slider("value");
+        controls.refresh();
+    },
+    change: function()
+    {
+        controls.waveformStencilAlphaThreshold = $("#stencilAlphaThresholdSlider").slider("value");
+        controls.refresh();
+    }
+});
+
 controls.refresh = function()
 {
     // Update values
     this.discRadiusValueSpan.innerHTML = controls.discRadius;
     this.waveformEnabled = waveformToggle.checked;
     this.waveformStencil = waveformStencilToggle.checked;
+    this.waveformStencilInvert = waveformStencilInvertToggle.checked;
     this.waveformSelectedImage = document.querySelector("input[name='waveform']:checked").value;
-
+    this.waveformStencilAlphaThresholdValueSpan.innerHTML = controls.waveformStencilAlphaThreshold;
+    
     bundle.updateDisc(this.discRadius, this.centreColour)
     bundle.updateWaveform({
         "type": ((this.waveformEnabled) ? ((this.waveformStencil) ? "stencil" : "image") : "disabled"),
-        "textureNum": this.waveformSelectedImage
+        "textureNum": this.waveformSelectedImage,
+        "invert": this.waveformStencilInvert,
+        "alphaThreshold": this.waveformStencilAlphaThreshold
     });
 
     bundle.refresh();
