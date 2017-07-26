@@ -2,6 +2,7 @@ var controls =
 {
     // Logo values
     centreColour: {r: 1, g: 1, b: 1, a:1},
+    backgroundColour: {_r: 0, _g: 0, _b: 0, _a: 0},
     discRadius: 0.9,
     waveformEnabled: true,
     waveformStencil: true, // If false assume image-overlay
@@ -17,7 +18,8 @@ var controls =
     waveformStencilToggle: document.getElementById("waveformStencilToggle"),
     waveformSelector: document.getElementById("waveformSelector"),
     waveformStencilInvertToggle: document.getElementById("waveformStencilInvertToggle"),
-    waveformStencilAlphaThresholdValueSpan: document.getElementById("stencilAlphaThresholdValue")
+    waveformStencilAlphaThresholdValueSpan: document.getElementById("stencilAlphaThresholdValue"),
+    canvas: document.getElementById("logoCanvas"),
 };
 
 $("#centreColourPicker").spectrum
@@ -46,6 +48,26 @@ $("#centreColourPicker").spectrum
             b: color._b/255, 
             a: color._a // Alpha does not need normalised
         };
+        controls.refresh();
+    }
+});
+
+$("#backgroundColourPicker").spectrum
+({
+    flat: true,
+    showInput: true,
+    color: "#fff",
+    showAlpha: true,
+    showButtons: false,
+    preferredFormat: "rgb",
+    move: function(color)
+    {
+        controls.backgroundColour = color;
+        controls.refresh();
+    },
+    change: function(color)
+    {
+        controls.backgroundColour = color;
         controls.refresh();
     }
 });
@@ -97,6 +119,9 @@ controls.refresh = function()
     this.waveformStencilInvert = waveformStencilInvertToggle.checked;
     this.waveformSelectedImage = document.querySelector("input[name='waveform']:checked").value;
     this.waveformStencilAlphaThresholdValueSpan.innerHTML = controls.waveformStencilAlphaThreshold;
+
+    // Update the canvas background styling
+    this.canvas.style.background = this.backgroundColour;
     
     bundle.updateDisc(this.discRadius, this.centreColour)
     bundle.updateWaveform({

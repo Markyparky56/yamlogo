@@ -2604,6 +2604,7 @@ function drawImageWaveform() {
     GLContext.useProgram(null);
 }
 function refresh() {
+    GLContext.clearColor(0, 0, 0, 0);
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT | GLContext.STENCIL_BUFFER_BIT);
     perspectiveMatrix = gl_matrix_1.mat4.create();
     perspectiveMatrix = gl_matrix_1.mat4.perspective(perspectiveMatrix, 0.698132, horizAspect, 0.1, 100.0);

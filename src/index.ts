@@ -436,6 +436,7 @@ function drawImageWaveform()
 export function refresh()
 {
     //console.log( {"waveformType": waveformType} )
+    GLContext.clearColor(0,0,0,0);
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT | GLContext.STENCIL_BUFFER_BIT);
 
     perspectiveMatrix = mat4.create();

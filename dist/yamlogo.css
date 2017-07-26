@@ -12,10 +12,30 @@ body
     align-items: center;
 }
 
+#colourControls
+{
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: left;
+    align-items: left;
+}
+
+#centreColourControl
+{
+    order: 0;
+}
+
+#backgroundColourControl
+{
+    padding-left: 5px;
+    order: 1;
+}
+
 #logoCanvas
 {
     order: 0;
-    background: black; /*Required to get past the Canvas compositing with alpha blending*/
+    background: transparent; /*Required to get past the Canvas compositing with alpha blending*/
 }
 
 #controls
