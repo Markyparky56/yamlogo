@@ -352,12 +352,6 @@ function loadJsonOptions()
 }
 
 window.onload = function(){
-    let a = document.createElement("a");
-    a.id = "canvasDownloadAnchor";
-    a.download = "yamlogo.png";
-    a.href = controls.canvas.toDataURL("image/png");
-    a.onclick = controls.download();
-    controls.canvas.appendChild(a);
     updateJsonOptions();
     controls.refresh();
 };
