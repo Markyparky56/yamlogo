@@ -103,6 +103,39 @@
                 }*/
             }
         </script>
+        <script id="logotext-vs" type="x-shader/x-vertex">#version 300 es
+            in vec3 aVertexPosition;
+            in vec2 aTexCoord;
+
+            uniform mat4 uMVMatrix;
+            uniform mat4 uPMatrix;
+
+            out vec2 vTexCoord;
+
+            void main(void)
+            {
+                gl_Position = uPMatrix * uMVMatrix * vec4(aVertexPosition, 1.0);
+                vTexCoord = aTexCoord;
+            }
+        </script>  
+        <script id="logotext-fs" type="x-shader/x-fragment">#version 300 es
+            precision highp float;
+            uniform sampler2D tex;
+            uniform vec4 uTextColour;
+            
+            in vec2 vTexCoord;
+            out vec4 outColour;
+
+            void main(void)
+            {
+                vec4 texColour = texture(tex, vTexCoord);
+                if(texColour.a == 0.0) discard;
+                else
+                {
+                    outColour = uTextColour * vec4(1.0, 1.0, 1.0, texColour.a);
+                }
+            }
+        </script>   
 
         <script src="https://code.jquery.com/jquery-3.2.1.min.js" type="text/javascript"></script>
         <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" type="text/javascript"></script>
@@ -160,17 +193,41 @@
                     Selected Waveform:
                     <br>
                     <div class="waveformSelector">
-                        <input id="jesus009" type="radio" name="waveform" value=0 onchange="controls.radioChange()">
+                        <input id="jesus009" type="radio" name="waveform" value=0 onchange="controls.waveChange()">
                         <label class="waveformSelectable waveform009" for="jesus009"></label>
-                        <input id="jesus0097" type="radio" name="waveform" value=1 onchange="controls.radioChange()">
+                        <input id="jesus0097" type="radio" name="waveform" value=1 onchange="controls.waveChange()">
                         <label class="waveformSelectable waveform0097" for="jesus0097"></label>
-                        <input id="jesus0125" type="radio" name="waveform" value=2 onchange="controls.radioChange()">
+                        <input id="jesus0125" type="radio" name="waveform" value=2 onchange="controls.waveChange()">
                         <label class="waveformSelectable waveform0125" for="jesus0125"></label>
-                        <input id="jesus015" type="radio" name="waveform" value=3 checked="checked" onchange="controls.radioChange()">
+                        <input id="jesus015" type="radio" name="waveform" value=3 checked="checked" onchange="controls.waveChange()">
                         <label class="waveformSelectable waveform015" for="jesus015"></label>                        
                     </div>
+                    <br> 
+                </div>
+                <div id="logoControls">
+                    <div id="logoTextColourControls">
+                        Logo Text Colour:<br>
+                        <input type="text" id="logoTextColourPicker">
+                    </div>
+                    <div id="logoPositonScaleControls">
+                        Logo Scale:<span id="logoScaleValue">0.7</span><br>
+                        <div id="logoScaleSlider"></div>
+                        <br>
+                        Logo Position Offset: (<span id="logoPosXOffset">0</span>, <span id="logoPosYOffset">0</span>)<br>
+                        X: <div id="logoPosXOffsetSlider"></div><br>
+                        Y: <div id="logoPosYOffsetSlider"></div>
+                    </div>
                     <br>
-                    
+                    <div class="logoSelector">
+                        <input id="logoFull" type="radio" name="logo" value=0 onchange="controls.logoChange()">
+                        <label class="logoSelectable logoFull" for="logoFull"></label>
+                        <input id="logoFullBlur" type="radio" name="logo" value=1 onchange="controls.logoChange()" checked="checked">
+                        <label class="logoSelectable logoFullBlur" for="logoFullBlur"></label>
+                        <input id="logoYA" type="radio" name="logo" value=2 onchange="controls.logoChange()">
+                        <label class="logoSelectable logoYA" for="logoYA"></label>
+                        <input id="logoYABlur" type="radio" name="logo" value=3 onchange="controls.logoChange()">
+                        <label class="logoSelectable logoYABlur" for="logoYABlur"></label>
+                    </div>
                 </div>
 
                 <script src="controls.js"></script>

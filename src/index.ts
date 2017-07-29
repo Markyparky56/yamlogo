@@ -4,31 +4,52 @@ import { SquareClass } from "./square"
 import { mat4, vec3 } from "gl-matrix"
 
 let GLContext: WebGL2RenderingContext; // Global WebGL2 Context
+let ExtAniso: EXT_texture_filter_anisotropic;
 let horizAspect = 1024.0/1024.0;
 let disc: DiscClass;
-let discVertBuffer: WebGLBuffer;
-let discColourBuffer: WebGLBuffer;
+let waveformSquare: SquareClass;
+let logoTextSquare: SquareClass;
+
 let mvMatrix: mat4;
 let perspectiveMatrix: mat4;
 let orthoMatrix: mat4;
+let logoScaleMatrix: mat4;
+let logoPosition: vec3;
+
 let circleShaderProgram: WebGLProgram;
 let textureShaderProgram: WebGLProgram;
 let stencilTextureShaderProgram: WebGLProgram;
+let logoTextShaderProgram: WebGLProgram;
+
 let circleVertexPositonAttribute: number;
 let circleVertexColourAttribute: number;
+let stencilTextureVertexPositionAttribute: number;
+let stencilTextureTexCoordAttribute: number;
+let textureVertexPositionAttribute: number;
+let textureTexCoordAttribute: number;
+let logoTextVertexPositionAttribute: number;
+let logoTextTexCoordAttribute: number;
+
+let discVertBuffer: WebGLBuffer;
+let discColourBuffer: WebGLBuffer;
+let waveformVertBuffer: WebGLBuffer;
+let waveformTexCoordBuffer: WebGLBuffer;
+let logoTextVertBuffer: WebGLBuffer;
+let logoTextTexCoordBuffer: WebGLBuffer;
+
 let waveformImgs: HTMLImageElement[];
 let waveformTextures: WebGLTexture[];
 let waveformTexturesLoaded: boolean[];
-let waveformVertBuffer: WebGLBuffer;
-let waveformTexCoordBuffer: WebGLBuffer;
-let stencilTextureVertexPositionAttribute: number;
-let stencilTextureTexCoordAttribute: number;
+
+let logoTextImgs: HTMLImageElement[];
+let logoTextTextures: WebGLTexture[];
+let logoTextTexturesLoaded: boolean[];
+
+let selectedWaveformTexture: number;
+let selectedLogoTextTexture: number;
 let stencilTextureInvert: number; // Can't have booleans, so treat non-zero values as true
 let stencilTextureAlphaThreshold: number;
-let textureVertexPositionAttribute: number;
-let textureTexCoordAttribute: number;
-let waveformSquare: SquareClass;
-let selectedWaveformTexture: number;
+let logoTextColour: ColourRGBA;
 
 enum waveformDisplayType
 {
@@ -44,11 +65,24 @@ interface waveformControls
     alphaThreshold: number;
 }
 let waveformType: waveformDisplayType;
+interface logoTextControls
+{
+    scale: number;
+    position: {x:number, y:number, z:number};
+    textColour: ColourRGBA;
+    textureNum: number; // 0-3
+}
 
 // Some helper functions
 function loadIdentity()
 {
     mvMatrix = mat4.identity(mvMatrix);
+}
+
+function dupMat4(m: mat4): mat4
+{
+    let d = mat4.clone(m);
+    return d;
 }
 
 function multMatrix(m: mat4)
@@ -59,6 +93,40 @@ function multMatrix(m: mat4)
 function mvTranslate(v: vec3)
 {
     mvMatrix = mat4.translate(mvMatrix, mvMatrix, v);
+}
+
+let mvMatrixStack: mat4[] = [];
+
+function mvPushMatrix(m: mat4 = null)
+{
+    if(m)
+    {
+        mvMatrixStack.push(mat4.clone(m));
+        mvMatrix = mat4.clone(m);
+    }
+    else
+    {
+        mvMatrixStack.push(mat4.clone(mvMatrix));
+    }
+}
+
+function mvPopMatrix()
+{
+    if(!mvMatrixStack.length)
+    {
+        throw("Can't pop from an empty matrix stack!");
+    }
+
+    mvMatrix = mvMatrixStack.pop();
+    return mvMatrix;
+}
+
+function mvRotate(angle: number, v: vec3)
+{
+    let inRads = angle * Math.PI / 180.0;
+    let m: mat4;
+    m = mat4.fromRotation(m, inRads, v);
+    multMatrix(m);
 }
 
 function setMatrixUniforms(shaderProgram: WebGLProgram)
@@ -73,17 +141,25 @@ function setMatrixUniforms(shaderProgram: WebGLProgram)
 
 function setStencilTextureShaderUniforms()
 {
+    GLContext.activeTexture(GLContext.TEXTURE0);
+    GLContext.bindTexture(GLContext.TEXTURE_2D, waveformTextures[selectedWaveformTexture]);
+    GLContext.uniform1i(GLContext.getUniformLocation(stencilTextureShaderProgram, "tex"), 0);
+
     let invertLoc = GLContext.getUniformLocation(stencilTextureShaderProgram, "uInvert");
     GLContext.uniform1i(invertLoc, stencilTextureInvert);
 
     let alphaThresholdLoc = GLContext.getUniformLocation(stencilTextureShaderProgram, "uAlphaThreshold");
     GLContext.uniform1f(alphaThresholdLoc, stencilTextureAlphaThreshold);
-    // console.log({
-    //     "invertLoc": invertLoc, 
-    //     "invert": stencilTextureInvert, 
-    //     "alphaThresholdLoc": alphaThresholdLoc, 
-    //     "stencilTextureAlphaThreshold": stencilTextureAlphaThreshold
-    // });
+}
+
+function setLogoTextShaderUniforms()
+{
+    GLContext.activeTexture(GLContext.TEXTURE0); 
+    GLContext.bindTexture(GLContext.TEXTURE_2D, logoTextTextures[selectedLogoTextTexture]);
+    GLContext.uniform1i(GLContext.getUniformLocation(logoTextShaderProgram, "tex"), 0);
+    
+    let textColourLoc = GLContext.getUniformLocation(logoTextShaderProgram, "uTextColour");
+    GLContext.uniform4f(textColourLoc, logoTextColour.r, logoTextColour.g, logoTextColour.b, logoTextColour.a);
 }
 
 function start()
@@ -99,11 +175,15 @@ function start()
         return;
     }
 
+    //EXT_texture_filter_anisotropic
+    ExtAniso = GLContext.getExtension("EXT_texture_filter_anisotropic");
+
     GLContext.clearColor(0.0, 0.0, 0.0, 1.0);
     GLContext.enable(GLContext.DEPTH_TEST);
     GLContext.enable(GLContext.BLEND);
     GLContext.depthFunc(GLContext.LEQUAL);
-    GLContext.blendFunc(GLContext.SRC_ALPHA, GLContext.ONE_MINUS_SRC_ALPHA);
+    //GLContext.blendFunc(GLContext.SRC_ALPHA, GLContext.ONE_MINUS_SRC_ALPHA);
+    GLContext.blendFunc(GLContext.ONE, GLContext.ONE_MINUS_SRC_ALPHA);
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT);
 
     disc = new DiscClass(256, 0.9, {r:1.0, g:1.0, b:1.0, a:1.0});
@@ -113,13 +193,23 @@ function start()
     waveformImgs = [];
     waveformTextures = [];
     waveformTexturesLoaded = [];
+    logoTextImgs = [];
+    logoTextTextures = [];
+    logoTextTexturesLoaded = [];
     waveformSquare = new SquareClass;
+    logoTextSquare = new SquareClass;
     waveformType = waveformDisplayType.Stencil;
     selectedWaveformTexture = 3;
+    selectedLogoTextTexture = 1;
     stencilTextureInvert = 0.0;
     stencilTextureAlphaThreshold = 0.25;
+    logoScaleMatrix = mat4.create();
+    logoScaleMatrix = mat4.scale(logoScaleMatrix, logoScaleMatrix, [0.7, 0.7, 1.0]);
+    logoPosition = vec3.fromValues(0.0, 0.0, 0.0);
+    logoTextColour = {r:0, g:0, b:0, a:1};
     initTextures();
     initSquareBuffers(waveformSquare);
+    initLogoTextBuffers(logoTextSquare);
 }
 
 export function updateDisc(radius: number, centreColour: ColourRGBA)
@@ -163,6 +253,14 @@ export function updateWaveform(controls: waveformControls)
 }
 
 // Update logo text
+export function updateLogoText(controls: logoTextControls)
+{
+    //console.log(controls.position);
+    logoScaleMatrix = mat4.scale(logoScaleMatrix, mat4.create(), [controls.scale, controls.scale, 1.0]);
+    logoPosition = vec3.fromValues(controls.position.x, controls.position.y, controls.position.z);
+    logoTextColour = controls.textColour;
+    selectedLogoTextTexture = controls.textureNum;
+}
 
 function initWebGL(canvas: HTMLCanvasElement): WebGL2RenderingContext
 {
@@ -173,7 +271,7 @@ function initWebGL(canvas: HTMLCanvasElement): WebGL2RenderingContext
                            , depth: true
                            , alpha: true
                            , stencil: true
-                           , premultipliedAlpha: true}
+                           , premultipliedAlpha: false}
                     );
 
     // If we don't have a GL context give up
@@ -261,6 +359,31 @@ function initShaders()
     GLContext.enableVertexAttribArray(stencilTextureTexCoordAttribute);
 
     GLContext.useProgram(null);
+
+    // Shader for drawing the logo text in a specified colour, blending with alpha from the texture
+    let logoTextFragmentShader: WebGLShader = getShader(GLContext, "logotext-fs");
+    let logoTextVertexShader: WebGLShader = getShader(GLContext, "logotext-vs");
+
+    // Create the logo text shader program
+    logoTextShaderProgram = GLContext.createProgram();
+    GLContext.attachShader(logoTextShaderProgram, logoTextFragmentShader);
+    GLContext.attachShader(logoTextShaderProgram, logoTextVertexShader);
+    GLContext.linkProgram(logoTextShaderProgram);
+
+    // If creating the shader program fails, alert
+    if(!GLContext.getProgramParameter(logoTextShaderProgram, GLContext.LINK_STATUS))
+    {
+        console.log("Unable to initialise the shader program: " + GLContext.getProgramInfoLog(logoTextShaderProgram));
+    }
+
+    GLContext.useProgram(logoTextShaderProgram);
+
+    logoTextVertexPositionAttribute = GLContext.getAttribLocation(logoTextShaderProgram, "aVertexPosition");
+    GLContext.enableVertexAttribArray(logoTextVertexPositionAttribute);
+    logoTextTexCoordAttribute = GLContext.getAttribLocation(logoTextShaderProgram, "aTexCoord");
+    GLContext.enableVertexAttribArray(logoTextTexCoordAttribute);
+
+    GLContext.useProgram(null);
 }
 
 function getShader(gl:WebGL2RenderingContext, id:string, type:number=null): WebGLShader
@@ -303,7 +426,7 @@ function getShader(gl:WebGL2RenderingContext, id:string, type:number=null): WebG
     // Check it compiled successfully
     if(!gl.getShaderParameter(shader, gl.COMPILE_STATUS))
     {
-        console.log("An error occured while compiling the shader: " + gl.getShaderInfoLog(shader));
+        console.log("An error occured while compiling the shader (" + id + "): " + gl.getShaderInfoLog(shader));
         gl.deleteShader(shader);
         return null;
     }
@@ -335,6 +458,18 @@ function initSquareBuffers(square: SquareClass)
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.texCoords), GLContext.STATIC_DRAW);
 }
 
+function initLogoTextBuffers(square: SquareClass)
+{
+    if(logoTextVertBuffer === undefined) logoTextVertBuffer = GLContext.createBuffer();
+    if(logoTextTexCoordBuffer === undefined) logoTextTexCoordBuffer = GLContext.createBuffer();
+
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, logoTextVertBuffer);
+    GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.vertices), GLContext.STATIC_DRAW);
+
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, logoTextTexCoordBuffer);
+    GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.texCoords), GLContext.STATIC_DRAW);
+}
+
 function initTextures()
 {
     let waveformImageSrcs = ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"];
@@ -342,24 +477,35 @@ function initTextures()
     {
         waveformImgs.push(new Image());
         waveformTextures.push(GLContext.createTexture());
-        waveformImgs[i].onload = function() { handleTextureLoad(waveformImgs[i], waveformTextures[i], i); }
+        waveformImgs[i].onload = function() { handleTextureLoad(waveformImgs[i], waveformTextures[i], waveformTexturesLoaded, i); }
         waveformImgs[i].src = waveformImageSrcs[i];
         waveformTexturesLoaded.push(false);
     }
+    let logoTextImageSrcs = ["./images/logomaintext-full.png", "./images/logomaintext-full-blurred.png", "./images/logomaintext-ya.png", "./images/logomaintext-ya-blurred.png"];
+    for(let i = 0; i < logoTextImageSrcs.length; i++)
+    {
+        logoTextImgs.push(new Image());
+        logoTextTextures.push(GLContext.createTexture());
+        logoTextImgs[i].onload = function() { handleTextureLoad(logoTextImgs[i], logoTextTextures[i], logoTextTexturesLoaded, i); }
+        logoTextImgs[i].src = logoTextImageSrcs[i];
+        logoTextTexturesLoaded.push(false);
+    }
 }
 
-function handleTextureLoad(image: HTMLImageElement, texture: WebGLTexture, num: number)
+function handleTextureLoad(image: HTMLImageElement, texture: WebGLTexture, loadedArray: boolean[], num: number)
 {
     GLContext.bindTexture(GLContext.TEXTURE_2D, texture);
+    GLContext.pixelStorei(GLContext.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true);
     GLContext.texImage2D(GLContext.TEXTURE_2D, 0, GLContext.RGBA, image.width, image.height, 0, GLContext.RGBA, GLContext.UNSIGNED_BYTE, image);
+    GLContext.texParameterf(GLContext.TEXTURE_2D, ExtAniso.TEXTURE_MAX_ANISOTROPY_EXT, 4);
     GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_MAG_FILTER, GLContext.LINEAR);
     GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_MIN_FILTER, GLContext.LINEAR_MIPMAP_NEAREST);
     GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_WRAP_S, GLContext.CLAMP_TO_EDGE);
     GLContext.texParameteri(GLContext.TEXTURE_2D, GLContext.TEXTURE_WRAP_T, GLContext.CLAMP_TO_EDGE);
     GLContext.generateMipmap(GLContext.TEXTURE_2D);
     GLContext.bindTexture(GLContext.TEXTURE_2D, null);
-    waveformTexturesLoaded[num] = true;
-    console.log("Texture " + num + " loaded");
+    loadedArray[num] = true;
+    console.log("Texture " + image.src.split('/').pop() + " loaded");
 }
 
 function drawRainbowDisc()
@@ -400,9 +546,6 @@ function drawStencilWaveform()
     GLContext.vertexAttribPointer(stencilTextureVertexPositionAttribute, 3, GLContext.FLOAT, false, 0, 0);
     GLContext.bindBuffer(GLContext.ARRAY_BUFFER, waveformTexCoordBuffer);
     GLContext.vertexAttribPointer(stencilTextureTexCoordAttribute, 2, GLContext.FLOAT, false, 0, 0);
-    GLContext.activeTexture(GLContext.TEXTURE0);
-    GLContext.bindTexture(GLContext.TEXTURE_2D, waveformTextures[selectedWaveformTexture]);
-    GLContext.uniform1i(GLContext.getUniformLocation(stencilTextureShaderProgram, "tex"), 0);
     
     setMatrixUniforms(stencilTextureShaderProgram);
     setStencilTextureShaderUniforms();
@@ -433,10 +576,38 @@ function drawImageWaveform()
     GLContext.useProgram(null);
 }
 
+function drawLogoText()
+{
+    GLContext.useProgram(logoTextShaderProgram);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, logoTextVertBuffer);
+    GLContext.vertexAttribPointer(logoTextVertexPositionAttribute, 3, GLContext.FLOAT, false, 0, 0);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, logoTextTexCoordBuffer);
+    GLContext.vertexAttribPointer(logoTextTexCoordAttribute, 2, GLContext.FLOAT, false, 0, 0);
+    
+    setLogoTextShaderUniforms();
+
+    // Scale the logo as-per settings
+    mvPushMatrix();
+    loadIdentity();
+    let trans: vec3 = vec3.create();
+    mvTranslate(vec3.set(trans, 0.0, 0.0, -3.0));      
+    mvTranslate(logoPosition);
+    console.log(mvMatrix);
+    multMatrix(logoScaleMatrix);
+    console.log(mvMatrix);
+    setMatrixUniforms(logoTextShaderProgram);
+
+    GLContext.drawArrays(GLContext.TRIANGLE_STRIP, 0, logoTextSquare.vertices.length/3);
+    GLContext.useProgram(null);
+
+    mvPopMatrix();
+}
+
 export function refresh()
 {
-    //console.log( {"waveformType": waveformType} )
-    GLContext.clearColor(0,0,0,0);
+    if(!rendererReady) return;
+
+    GLContext.clearColor(1,1,1,0);
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT | GLContext.STENCIL_BUFFER_BIT);
 
     perspectiveMatrix = mat4.create();
@@ -472,15 +643,19 @@ export function refresh()
         drawImageWaveform();
     }
 
+    // Draw the logo text over the top
+    drawLogoText();
+
 }
 
 start();
 
+let rendererReady = false;
 function imagesReadyCheck()
 {
-    let ready = true;
-    waveformTexturesLoaded.forEach(function(item){ready = item;})
-    if(ready)
+    waveformTexturesLoaded.forEach(function(item){rendererReady = item;})
+    logoTextTexturesLoaded.forEach(function(item){rendererReady = item;})
+    if(rendererReady)
     {
         console.log("All textures loaded!");
         clearInterval(readyCheck);

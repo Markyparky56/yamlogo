@@ -1,7 +1,5 @@
-body 
-{
-    margin: 0px;
-}
+body { margin: 0px; }
+#jsonOptionsTextBox{ resize: none; }
 
 #maincontent
 {
@@ -21,10 +19,7 @@ body
     align-items: left;
 }
 
-#centreColourControl
-{
-    order: 0;
-}
+#centreColourControl{ order: 0; }
 
 #backgroundColourControl
 {
@@ -44,15 +39,11 @@ body
     flex-basis: content;
 }
 
-#radiusSlider
-{
-    width: 300px;
-}
-
-#stencilAlphaSlider
-{
-    width: 300px;
-}
+#radiusSlider{ width: 300px; }
+#stencilAlphaSlider{ width: 300px;}
+#logoScaleSlider{width:300px;}
+#logoPosXOffsetSlider{width:300px;}
+#logoPosYOffsetSlider{width:300px;}
 
 .waveformSelector input
 {
@@ -92,7 +83,30 @@ body
     filter: brightness(1.2) grayscale(.5) opacity(.9);
 }
 
-#jsonOptionsTextBox
+.logoSelector input
 {
-    resize: none;
+    position: absolute;
+    z-index: 999;
 }
+
+.logoSelector input:active + .logoSelectable{ opacity: 0.9; }
+.logoSelector input:checked + .logoSelectable{ filter: none; }
+
+.logoFull       {background-image: url(./images/logomaintext-full.png);        }
+.logoFullBlur   {background-image: url(./images/logomaintext-full-blurred.png);}
+.logoYA         {background-image: url(./images/logomaintext-ya.png);          }
+.logoYABlur     {background-image: url(./images/logomaintext-ya-blurred.png);  }
+
+.logoSelectable
+{
+    cursor: pointer;
+    background-size: contain;
+    background-repeat: no-repeat;
+    display: inline-block;
+    width: 128px;
+    height: 128px;
+    transition: all 100ms ease-in;
+    filter: brightness(1.8) grayscale(1) opacity(.7);
+}
+
+.logoSelectable:hover{filter:brightness(1.2) grayscale(.5) opacity(.9);}
