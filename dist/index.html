@@ -119,6 +119,14 @@
             </div>
 
             <div id="controls">
+                <div id="jsonOptions">
+                    Json Options
+                    <br>
+                    <textarea id="jsonOptionsTextBox" cols="70" rows="5" wrap="soft"></textarea>
+                    <br>
+                    <input id="loadJson" type="button" value="Load" onclick="loadJsonOptions()">
+                </div>
+
                 <div id="colourControls">
                     <div id="centreColourControl">
                         Centre Colour<br>
@@ -152,13 +160,13 @@
                     Selected Waveform:
                     <br>
                     <div class="waveformSelector">
-                        <input id="jesus009" type="radio" name="waveform" value="0" onchange="controls.refresh()">
+                        <input id="jesus009" type="radio" name="waveform" value=0 onchange="controls.radioChange()">
                         <label class="waveformSelectable waveform009" for="jesus009"></label>
-                        <input id="jesus0097" type="radio" name="waveform" value="1" onchange="controls.refresh()">
+                        <input id="jesus0097" type="radio" name="waveform" value=1 onchange="controls.radioChange()">
                         <label class="waveformSelectable waveform0097" for="jesus0097"></label>
-                        <input id="jesus0125" type="radio" name="waveform" value="2" onchange="controls.refresh()">
+                        <input id="jesus0125" type="radio" name="waveform" value=2 onchange="controls.radioChange()">
                         <label class="waveformSelectable waveform0125" for="jesus0125"></label>
-                        <input id="jesus015" type="radio" name="waveform" value="3" checked="checked" onchange="controls.refresh()">
+                        <input id="jesus015" type="radio" name="waveform" value=3 checked="checked" onchange="controls.radioChange()">
                         <label class="waveformSelectable waveform015" for="jesus015"></label>                        
                     </div>
                     <br>

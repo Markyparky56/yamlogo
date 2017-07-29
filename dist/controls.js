@@ -1,15 +1,17 @@
 var controls = 
 {
     // Logo values
-    centreColour: {r: 1, g: 1, b: 1, a:1},
-    backgroundColour: {_r: 0, _g: 0, _b: 0, _a: 0},
-    discRadius: 0.9,
-    waveformEnabled: true,
-    waveformStencil: true, // If false assume image-overlay
-    waveformImageSrcs: ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"],
-    waveformSelectedImage: 3, // 0-indexed
-    waveformStencilInvert: false,
-    waveformStencilAlphaThreshold: 0.25,
+    options: {
+        centreColour: {r: 1, g: 1, b: 1, a:1},
+        backgroundColour: {_r: 255, _g: 255, _b: 255, _a: 1},
+        discRadius: 0.981,
+        waveformEnabled: true,
+        waveformStencil: true, // If false assume image-overlay
+        waveformStencilInvert: false,
+        waveformStencilAlphaThreshold: 0.181,
+        waveformImageSrcs: ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"],
+        waveformSelectedImage: 3, // 0-indexed    
+    },
 
     // Control element references
     centreColourPicker: document.getElementById("centreColourPicker"),
@@ -20,6 +22,7 @@ var controls =
     waveformStencilInvertToggle: document.getElementById("waveformStencilInvertToggle"),
     waveformStencilAlphaThresholdValueSpan: document.getElementById("stencilAlphaThresholdValue"),
     canvas: document.getElementById("logoCanvas"),
+    jsonTextBox: document.getElementById("jsonOptionsTextBox"),
 };
 
 $("#centreColourPicker").spectrum
@@ -32,20 +35,20 @@ $("#centreColourPicker").spectrum
     preferredFormat: "rgb",
     move: function(color)
     {
-        controls.centreColour = { 
-            r: color._r/255, 
-            g: color._g/255, 
-            b: color._b/255, 
+        controls.options.centreColour = { 
+            r: (color._r/255), 
+            g: (color._g/255), 
+            b: (color._b/255), 
             a: color._a // Alpha does not need normalised
         };
         controls.refresh();
     },
     change: function(color)
     {
-        controls.centreColour = { 
-            r: color._r/255, 
-            g: color._g/255, 
-            b: color._b/255, 
+        controls.options.centreColour = { 
+            r: (color._r/255), 
+            g: (color._g/255), 
+            b: (color._b/255), 
             a: color._a // Alpha does not need normalised
         };
         controls.refresh();
@@ -62,12 +65,12 @@ $("#backgroundColourPicker").spectrum
     preferredFormat: "rgb",
     move: function(color)
     {
-        controls.backgroundColour = color;
+        controls.options.backgroundColour = color;
         controls.refresh();
     },
     change: function(color)
     {
-        controls.backgroundColour = color;
+        controls.options.backgroundColour = color;
         controls.refresh();
     }
 });
@@ -78,15 +81,15 @@ $("#radiusSlider").slider
     max: 1.0,
     min: 0.0,
     step: 0.001,
-    value: 0.9,
+    value: 0.981,
     slide: function()
     {
-        controls.discRadius = $("#radiusSlider").slider("value");
+        controls.options.discRadius = $("#radiusSlider").slider("value");
         controls.refresh()
     },
     change: function()
     {
-        controls.discRadius = $("#radiusSlider").slider("value");
+        controls.options.discRadius = $("#radiusSlider").slider("value");
         controls.refresh()
     },
 });
@@ -97,39 +100,117 @@ $("#stencilAlphaThresholdSlider").slider
     max: 1.0,
     min: 0.0,
     step: 0.001,
-    value: 0.25,
+    value: 0.181,
     slide: function()
     {
-        controls.waveformStencilAlphaThreshold = $("#stencilAlphaThresholdSlider").slider("value");
+        controls.options.waveformStencilAlphaThreshold = $("#stencilAlphaThresholdSlider").slider("value");
         controls.refresh();
     },
     change: function()
     {
-        controls.waveformStencilAlphaThreshold = $("#stencilAlphaThresholdSlider").slider("value");
+        controls.options.waveformStencilAlphaThreshold = $("#stencilAlphaThresholdSlider").slider("value");
         controls.refresh();
     }
 });
 
+controls.radioChange = function()
+{
+    this.options.waveformSelectedImage = document.querySelector("input[name='waveform']:checked").value;
+    controls.refresh();
+}
+
 controls.refresh = function()
 {
-    // Update values
-    this.discRadiusValueSpan.innerHTML = controls.discRadius;
-    this.waveformEnabled = waveformToggle.checked;
-    this.waveformStencil = waveformStencilToggle.checked;
-    this.waveformStencilInvert = waveformStencilInvertToggle.checked;
-    this.waveformSelectedImage = document.querySelector("input[name='waveform']:checked").value;
-    this.waveformStencilAlphaThresholdValueSpan.innerHTML = controls.waveformStencilAlphaThreshold;
+    // Update readouts
+    this.discRadiusValueSpan.innerHTML = controls.options.discRadius;
+    this.waveformStencilAlphaThresholdValueSpan.innerHTML = controls.options.waveformStencilAlphaThreshold;
+    
+    // Update options
+    this.options.waveformEnabled = waveformToggle.checked;
+    this.options.waveformStencil = waveformStencilToggle.checked;
+    this.options.waveformStencilInvert = waveformStencilInvertToggle.checked;
+    //this.options.waveformSelectedImage = document.querySelector("input[name='waveform']:checked").value;
 
     // Update the canvas background styling
-    this.canvas.style.background = this.backgroundColour;
-    
-    bundle.updateDisc(this.discRadius, this.centreColour)
+    this.canvas.style.background = this.options.backgroundColour;
+   
+    bundle.updateDisc(this.options.discRadius, this.options.centreColour)
     bundle.updateWaveform({
-        "type": ((this.waveformEnabled) ? ((this.waveformStencil) ? "stencil" : "image") : "disabled"),
-        "textureNum": this.waveformSelectedImage,
-        "invert": this.waveformStencilInvert,
-        "alphaThreshold": this.waveformStencilAlphaThreshold
+        "type": ((this.options.waveformEnabled) ? ((this.options.waveformStencil) ? "stencil" : "image") : "disabled"),
+        "textureNum": this.options.waveformSelectedImage,
+        "invert": this.options.waveformStencilInvert,
+        "alphaThreshold": this.options.waveformStencilAlphaThreshold
     });
 
     bundle.refresh();
+    updateJsonOptions();
 }
+
+function updateJsonOptions()
+{
+    let jsonString = JSON.stringify({
+        "centreColour": controls.options.centreColour,
+        "backgroundColour": {_r:controls.options.backgroundColour._r, 
+                             _g:controls.options.backgroundColour._g, 
+                             _b:controls.options.backgroundColour._b, 
+                             _a:controls.options.backgroundColour._a},
+        "discRadius": controls.options.discRadius,
+        "waveformEnabled": controls.options.waveformEnabled,
+        "waveformStencil": controls.options.waveformStencil,
+        "waveformStencilInvert": controls.options.waveformStencilInvert,
+        "waveformStencilAlphaThreshold": controls.options.waveformStencilAlphaThreshold,
+        "waveformSelectedImage": controls.options.waveformSelectedImage
+    }, function(key, val) 
+    {
+        // If it's a number, truncate it so that it's not excessively long
+        return val.toFixed ? Number(val.toPrecision(3)) : val;
+    });
+    controls.jsonTextBox.value = jsonString;
+}
+
+function loadJsonOptions()
+{
+    let jsonString = controls.jsonTextBox.value;
+    let options = JSON.parse(jsonString);
+
+    controls.options = options;
+    
+    // Update html elements with respect to loaded options
+    controls.waveformToggle = controls.options.waveformEnabled;
+    controls.waveformStencilToggle = controls.options.waveformStencil;
+    controls.waveformStencilInvertToggle = controls.options.waveformStencilInvert;
+
+    switch(controls.options.waveformSelectedImage)
+    {
+        case 0: case '0': $("#jesus009").prop("checked", true); break;
+        case 1: case '1': $("#jesus0097").prop("checked", true); break;
+        case 2: case '2': $("#jesus0125").prop("checked", true); break;
+        case 3: case '3': $("#jesus015").prop("checked", true); break;
+        default: console.log("Unrecognised case"); break;
+    } 
+
+    controls.discRadiusValueSpan.value = controls.options.discRadius;
+    $("#radiusSlider").slider({value: controls.options.discRadius});
+
+    controls.waveformStencilAlphaThresholdValueSpan.innerText = controls.options.waveformStencilAlphaThreshold;
+    $("#stencilAlphaThresholdSlider").slider({value: controls.options.waveformStencilAlphaThreshold});
+
+    // Convert the colours back into something spectrum understands
+    let centreColour = "rgba(" + controls.options.centreColour.r*255 
+                        + "," + controls.options.centreColour.g*255 
+                        + "," + controls.options.centreColour.b*255 
+                        + "," + controls.options.centreColour.a + ")";
+    let backgroundColour = "rgba(" + controls.options.backgroundColour._r
+                            + "," + controls.options.backgroundColour._g
+                            + "," + controls.options.backgroundColour._b
+                            + "," + controls.options.backgroundColour._a + ")";
+    $("#centreColourPicker").spectrum("set", centreColour);
+    $("#backgroundColourPicker").spectrum("set", backgroundColour);
+
+    controls.refresh();
+}
+
+window.onload = function(){
+    updateJsonOptions();
+    controls.refresh();
+};
