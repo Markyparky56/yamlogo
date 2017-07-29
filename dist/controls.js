@@ -249,6 +249,12 @@ controls.refresh = function()
         "textColour": this.options.logoColour,
         "textureNum": this.options.logoSelectedImage
     });
+    bundle.updateBackgroundColour({
+        r: this.options.backgroundColour._r/255,
+        g: this.options.backgroundColour._g/255,
+        b: this.options.backgroundColour._b/255,
+        a: this.options.backgroundColour._a,
+    })
 
     bundle.refresh();
     updateJsonOptions();
@@ -258,10 +264,10 @@ function updateJsonOptions()
 {
     let jsonString = JSON.stringify({
         "centreColour": controls.options.centreColour,
-        "backgroundColour": {_r:controls.options.backgroundColour._r, 
-                             _g:controls.options.backgroundColour._g, 
-                             _b:controls.options.backgroundColour._b, 
-                             _a:controls.options.backgroundColour._a},
+        "backgroundColour": {r:controls.options.backgroundColour._r, 
+                             g:controls.options.backgroundColour._g, 
+                             b:controls.options.backgroundColour._b, 
+                             a:controls.options.backgroundColour._a},
         "discRadius": controls.options.discRadius,
         "waveformEnabled": controls.options.waveformEnabled,
         "waveformStencil": controls.options.waveformStencil,
@@ -286,11 +292,12 @@ function loadJsonOptions()
     let options = JSON.parse(jsonString);
 
     controls.options = options;
-    
+    controls.options.backgroundColour = tinycolor(controls.options.backgroundColour);
+
     // Update html elements with respect to loaded options
-    controls.waveformToggle = controls.options.waveformEnabled;
-    controls.waveformStencilToggle = controls.options.waveformStencil;
-    controls.waveformStencilInvertToggle = controls.options.waveformStencilInvert;
+    controls.waveformToggle.checked = controls.options.waveformEnabled;
+    controls.waveformStencilToggle.checked = controls.options.waveformStencil;
+    controls.waveformStencilInvertToggle.checked = controls.options.waveformStencilInvert;
     
     switch(controls.options.waveformSelectedImage)
     {
@@ -345,6 +352,17 @@ function loadJsonOptions()
 }
 
 window.onload = function(){
+    let a = document.createElement("a");
+    a.id = "canvasDownloadAnchor";
+    a.download = "yamlogo.png";
+    a.href = controls.canvas.toDataURL("image/png");
+    a.onclick = controls.download();
+    controls.canvas.appendChild(a);
     updateJsonOptions();
     controls.refresh();
 };
+
+controls.download = function()
+{
+
+}

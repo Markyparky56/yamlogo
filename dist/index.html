@@ -132,7 +132,7 @@
                 if(texColour.a == 0.0) discard;
                 else
                 {
-                    outColour = uTextColour * vec4(1.0, 1.0, 1.0, texColour.a);
+                    outColour = uTextColour * vec4(1.0*texColour.a, 1.0*texColour.a, 1.0*texColour.a, texColour.a);
                 }
             }
         </script>   
@@ -229,6 +229,7 @@
                         <label class="logoSelectable logoYABlur" for="logoYABlur"></label>
                     </div>
                 </div>
+                <a id="downloadButton" onclick="$('#downloadButton').attr('href', controls.canvas.toDataURL());" download="yamlogo.png" href="#" target="_blank">Click to Download</a>
 
                 <script src="controls.js"></script>
             </div>

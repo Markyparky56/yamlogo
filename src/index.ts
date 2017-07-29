@@ -9,6 +9,7 @@ let horizAspect = 1024.0/1024.0;
 let disc: DiscClass;
 let waveformSquare: SquareClass;
 let logoTextSquare: SquareClass;
+let gatechurchLogo: SquareClass;
 
 let mvMatrix: mat4;
 let perspectiveMatrix: mat4;
@@ -29,6 +30,8 @@ let textureVertexPositionAttribute: number;
 let textureTexCoordAttribute: number;
 let logoTextVertexPositionAttribute: number;
 let logoTextTexCoordAttribute: number;
+// let gatechurchLogoVertexPositionAttribute: number;
+// let gatechurchLogoTexCoordAttribute: number;
 
 let discVertBuffer: WebGLBuffer;
 let discColourBuffer: WebGLBuffer;
@@ -36,6 +39,8 @@ let waveformVertBuffer: WebGLBuffer;
 let waveformTexCoordBuffer: WebGLBuffer;
 let logoTextVertBuffer: WebGLBuffer;
 let logoTextTexCoordBuffer: WebGLBuffer;
+let gatechurchLogoVertBuffer: WebGLBuffer;
+let gatechurchLogoTexCoordBuffer: WebGLBuffer;
 
 let waveformImgs: HTMLImageElement[];
 let waveformTextures: WebGLTexture[];
@@ -45,11 +50,16 @@ let logoTextImgs: HTMLImageElement[];
 let logoTextTextures: WebGLTexture[];
 let logoTextTexturesLoaded: boolean[];
 
+let gatechurchLogoImg: HTMLImageElement;
+let gatechurchLogoTexture: WebGLTexture;
+let gatechurchLogoTextureLoaded: boolean[];
+
 let selectedWaveformTexture: number;
 let selectedLogoTextTexture: number;
 let stencilTextureInvert: number; // Can't have booleans, so treat non-zero values as true
 let stencilTextureAlphaThreshold: number;
 let logoTextColour: ColourRGBA;
+let backgroundColour: ColourRGBA;
 
 enum waveformDisplayType
 {
@@ -77,12 +87,6 @@ interface logoTextControls
 function loadIdentity()
 {
     mvMatrix = mat4.identity(mvMatrix);
-}
-
-function dupMat4(m: mat4): mat4
-{
-    let d = mat4.clone(m);
-    return d;
 }
 
 function multMatrix(m: mat4)
@@ -162,6 +166,13 @@ function setLogoTextShaderUniforms()
     GLContext.uniform4f(textColourLoc, logoTextColour.r, logoTextColour.g, logoTextColour.b, logoTextColour.a);
 }
 
+function setGatechurchLogoShaderUniforms()
+{
+    GLContext.activeTexture(GLContext.TEXTURE0);
+    GLContext.bindTexture(GLContext.TEXTURE_2D, gatechurchLogoTexture);
+    GLContext.uniform1i(GLContext.getUniformLocation(textureShaderProgram, "tex"), 0);
+}
+
 function start()
 {
     let canvas = <HTMLCanvasElement>document.getElementById("logoCanvas");
@@ -196,8 +207,18 @@ function start()
     logoTextImgs = [];
     logoTextTextures = [];
     logoTextTexturesLoaded = [];
+    gatechurchLogoTextureLoaded = [];
     waveformSquare = new SquareClass;
     logoTextSquare = new SquareClass;
+    gatechurchLogo = new SquareClass;
+    gatechurchLogo.vertices = // Custom vertices because the church logo is tiny
+    [
+    //  X         Y         Z
+        -0.09277,  0.03369, 0.0, // Top Left
+         0.09277,  0.03369, 0.0, // Top Right
+        -0.09277, -0.03369, 0.0, // Bottom Left
+         0.09277, -0.03369, 0.0, // Bottom Right
+    ];
     waveformType = waveformDisplayType.Stencil;
     selectedWaveformTexture = 3;
     selectedLogoTextTexture = 1;
@@ -208,8 +229,9 @@ function start()
     logoPosition = vec3.fromValues(0.0, 0.0, 0.0);
     logoTextColour = {r:0, g:0, b:0, a:1};
     initTextures();
-    initSquareBuffers(waveformSquare);
+    initWaveformBuffers(waveformSquare);
     initLogoTextBuffers(logoTextSquare);
+    initGatechurchLogoBuffers(gatechurchLogo);
 }
 
 export function updateDisc(radius: number, centreColour: ColourRGBA)
@@ -260,6 +282,11 @@ export function updateLogoText(controls: logoTextControls)
     logoPosition = vec3.fromValues(controls.position.x, controls.position.y, controls.position.z);
     logoTextColour = controls.textColour;
     selectedLogoTextTexture = controls.textureNum;
+}
+
+export function updateBackgroundColour(bgColour: ColourRGBA)
+{
+    backgroundColour = {r: bgColour.r, g: bgColour.g, b: bgColour.b, a: bgColour.a};
 }
 
 function initWebGL(canvas: HTMLCanvasElement): WebGL2RenderingContext
@@ -446,7 +473,7 @@ function initDiscBuffers(disc: DiscClass)
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(disc.colours), GLContext.STATIC_DRAW);
 }
 
-function initSquareBuffers(square: SquareClass)
+function initWaveformBuffers(square: SquareClass)
 {
     if(waveformVertBuffer === undefined) waveformVertBuffer = GLContext.createBuffer();
     if(waveformTexCoordBuffer === undefined) waveformTexCoordBuffer = GLContext.createBuffer();
@@ -470,6 +497,18 @@ function initLogoTextBuffers(square: SquareClass)
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.texCoords), GLContext.STATIC_DRAW);
 }
 
+function initGatechurchLogoBuffers(square: SquareClass)
+{
+    if(gatechurchLogoVertBuffer === undefined) gatechurchLogoVertBuffer = GLContext.createBuffer();
+    if(gatechurchLogoTexCoordBuffer === undefined) gatechurchLogoTexCoordBuffer = GLContext.createBuffer();
+
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, gatechurchLogoVertBuffer);
+    GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.vertices), GLContext.STATIC_DRAW);
+
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, gatechurchLogoTexCoordBuffer);
+    GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.texCoords), GLContext.STATIC_DRAW);
+}
+
 function initTextures()
 {
     let waveformImageSrcs = ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"];
@@ -490,6 +529,12 @@ function initTextures()
         logoTextImgs[i].src = logoTextImageSrcs[i];
         logoTextTexturesLoaded.push(false);
     }
+    let gatechurchImageSrc = "./images/gatechurch.png";
+    gatechurchLogoImg = new Image();
+    gatechurchLogoTexture = GLContext.createTexture();
+    gatechurchLogoImg.onload = function() { handleTextureLoad(gatechurchLogoImg, gatechurchLogoTexture, gatechurchLogoTextureLoaded, 0);}
+    gatechurchLogoImg.src = gatechurchImageSrc;
+    gatechurchLogoTextureLoaded.push(false);
 }
 
 function handleTextureLoad(image: HTMLImageElement, texture: WebGLTexture, loadedArray: boolean[], num: number)
@@ -588,16 +633,39 @@ function drawLogoText()
 
     // Scale the logo as-per settings
     mvPushMatrix();
-    loadIdentity();
-    let trans: vec3 = vec3.create();
-    mvTranslate(vec3.set(trans, 0.0, 0.0, -3.0));      
+    // loadIdentity();
+    // let trans: vec3 = vec3.create();
+    // mvTranslate(vec3.set(trans, 0.0, 0.0, -3.0));      
     mvTranslate(logoPosition);
-    console.log(mvMatrix);
     multMatrix(logoScaleMatrix);
-    console.log(mvMatrix);
     setMatrixUniforms(logoTextShaderProgram);
 
     GLContext.drawArrays(GLContext.TRIANGLE_STRIP, 0, logoTextSquare.vertices.length/3);
+    GLContext.useProgram(null);
+
+    mvPopMatrix();
+}
+
+function drawGatechurchLogo()
+{
+    GLContext.useProgram(textureShaderProgram);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, gatechurchLogoVertBuffer);
+    GLContext.vertexAttribPointer(textureVertexPositionAttribute, 3, GLContext.FLOAT, false, 0, 0);
+    GLContext.bindBuffer(GLContext.ARRAY_BUFFER, gatechurchLogoTexCoordBuffer);
+    GLContext.vertexAttribPointer(textureTexCoordAttribute, 2, GLContext.FLOAT, false, 0, 0);
+
+    setGatechurchLogoShaderUniforms();
+
+    mvPushMatrix();
+    let pos: vec3 = vec3.create();
+    let scale: mat4 = mat4.create();
+    scale = mat4.scale(scale, mat4.create(), [2.0, 2.0, 1.0]);
+    vec3.set(pos, 0.0, 0.8, 0.0);
+    mvTranslate(pos);
+    multMatrix(scale);
+    setMatrixUniforms(textureShaderProgram);
+
+    GLContext.drawArrays(GLContext.TRIANGLE_STRIP, 0, gatechurchLogo.vertices.length/3);
     GLContext.useProgram(null);
 
     mvPopMatrix();
@@ -607,7 +675,7 @@ export function refresh()
 {
     if(!rendererReady) return;
 
-    GLContext.clearColor(1,1,1,0);
+    GLContext.clearColor(backgroundColour.r,backgroundColour.g,backgroundColour.b,backgroundColour.a);
     GLContext.clear(GLContext.COLOR_BUFFER_BIT | GLContext.DEPTH_BUFFER_BIT | GLContext.STENCIL_BUFFER_BIT);
 
     perspectiveMatrix = mat4.create();
@@ -643,6 +711,9 @@ export function refresh()
         drawImageWaveform();
     }
 
+    // Draw the Gate Church Logo
+    drawGatechurchLogo();
+
     // Draw the logo text over the top
     drawLogoText();
 
@@ -650,11 +721,17 @@ export function refresh()
 
 start();
 
-let rendererReady = false;
+let rendererReady = true;
 function imagesReadyCheck()
 {
-    waveformTexturesLoaded.forEach(function(item){rendererReady = item;})
-    logoTextTexturesLoaded.forEach(function(item){rendererReady = item;})
+    //waveformTexturesLoaded.forEach(function(item){if(item){rendererReady = true}else{rendererReady=false; }})
+    waveformTexturesLoaded.every(function(item){rendererReady=true;if(!item){rendererReady = false;return false;}})
+    //logoTextTexturesLoaded.forEach(function(item){rendererReady = item;})
+    logoTextTexturesLoaded.every(function(item){rendererReady=true;if(!item){rendererReady = false;return false;}})
+    //rendererReady = gatechurchLogoTextureLoaded[0];
+    if(gatechurchLogoTextureLoaded[0]) rendererReady = true;
+    else rendererReady = false;
+
     if(rendererReady)
     {
         console.log("All textures loaded!");
