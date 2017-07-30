@@ -24,7 +24,7 @@
             }
         </script>
         <script id="circle-fs" type="x-shader/x-fragment">#version 300 es
-            precision lowp float; // Low percision is fine for regular rgba colour
+            precision highp float;
             
             in vec4 vColour;            
             
@@ -218,6 +218,8 @@
                         Y: <div id="logoPosYOffsetSlider"></div>
                     </div>
                     <br>
+                    Selected Logo Text:
+                    <br>
                     <div class="logoSelector">
                         <input id="logoFull" type="radio" name="logo" value=0 onchange="controls.logoChange()">
                         <label class="logoSelectable logoFull" for="logoFull"></label>
@@ -229,7 +231,7 @@
                         <label class="logoSelectable logoYABlur" for="logoYABlur"></label>
                     </div>
                 </div>
-                <a id="downloadButton" onclick="$('#downloadButton').attr('href', controls.canvas.toDataURL());" download="yamlogo.png" href="#" target="_blank">Click to Download</a>
+                <a id="downloadButton" href="#">Click to Download</a>
 
                 <script src="controls.js"></script>
             </div>

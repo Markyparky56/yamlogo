@@ -2509,7 +2509,8 @@ function initWebGL(canvas) {
         depth: true,
         alpha: true,
         stencil: true,
-        premultipliedAlpha: false });
+        premultipliedAlpha: false,
+        preserveDrawingBuffer: true });
     if (!gl) {
         alert("Unable to initialise WebGL, your browser may not support it. :(");
     }
@@ -2651,10 +2652,11 @@ function initGatechurchLogoBuffers(square) {
     GLContext.bufferData(GLContext.ARRAY_BUFFER, new Float32Array(square.texCoords), GLContext.STATIC_DRAW);
 }
 function initTextures() {
-    var waveformImageSrcs = ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"];
+    var waveformImageSrcs = ["images/jesus009.png", "images/jesus0097.png", "images/jesus0125.png", "images/jesus015.png"];
     var _loop_1 = function (i) {
         waveformImgs.push(new Image());
         waveformTextures.push(GLContext.createTexture());
+        waveformImgs[i].crossOrigin = "anonymous";
         waveformImgs[i].onload = function () { handleTextureLoad(waveformImgs[i], waveformTextures[i], waveformTexturesLoaded, i); };
         waveformImgs[i].src = waveformImageSrcs[i];
         waveformTexturesLoaded.push(false);
@@ -2662,10 +2664,11 @@ function initTextures() {
     for (var i = 0; i < waveformImageSrcs.length; i++) {
         _loop_1(i);
     }
-    var logoTextImageSrcs = ["./images/logomaintext-full.png", "./images/logomaintext-full-blurred.png", "./images/logomaintext-ya.png", "./images/logomaintext-ya-blurred.png"];
+    var logoTextImageSrcs = ["images/logomaintext-full.png", "images/logomaintext-full-blurred.png", "images/logomaintext-ya.png", "images/logomaintext-ya-blurred.png"];
     var _loop_2 = function (i) {
         logoTextImgs.push(new Image());
         logoTextTextures.push(GLContext.createTexture());
+        logoTextImgs[i].crossOrigin = "anonymous";
         logoTextImgs[i].onload = function () { handleTextureLoad(logoTextImgs[i], logoTextTextures[i], logoTextTexturesLoaded, i); };
         logoTextImgs[i].src = logoTextImageSrcs[i];
         logoTextTexturesLoaded.push(false);
@@ -2673,9 +2676,10 @@ function initTextures() {
     for (var i = 0; i < logoTextImageSrcs.length; i++) {
         _loop_2(i);
     }
-    var gatechurchImageSrc = "./images/gatechurch.png";
+    var gatechurchImageSrc = "images/gatechurch.png";
     gatechurchLogoImg = new Image();
     gatechurchLogoTexture = GLContext.createTexture();
+    gatechurchLogoImg.crossOrigin = "anonymous";
     gatechurchLogoImg.onload = function () { handleTextureLoad(gatechurchLogoImg, gatechurchLogoTexture, gatechurchLogoTextureLoaded, 0); };
     gatechurchLogoImg.src = gatechurchImageSrc;
     gatechurchLogoTextureLoaded.push(false);

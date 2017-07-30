@@ -9,7 +9,7 @@ var controls =
         waveformStencil: true, // If false assume image-overlay
         waveformStencilInvert: false,
         waveformStencilAlphaThreshold: 0.181,
-        waveformImageSrcs: ["./images/jesus009.png", "./images/jesus0097.png", "./images/jesus0125.png", "./images/jesus015.png"],
+        waveformImageSrcs: ["images/jesus009.png", "images/jesus0097.png", "images/jesus0125.png", "images/jesus015.png"],
         waveformSelectedImage: 3, // 0-indexed  
         logoColour: {r: 0, g: 0, b: 0, a: 1},
         logoScale: 0.9,
@@ -207,7 +207,7 @@ $("#logoPosYOffsetSlider").slider
     }
 });
 
-controls.radioChange = function()
+controls.waveChange = function()
 {
     this.options.waveformSelectedImage = document.querySelector("input[name='waveform']:checked").value;
     controls.refresh();
@@ -356,7 +356,12 @@ window.onload = function(){
     controls.refresh();
 };
 
-controls.download = function()
+function downloadCanvas(link, canvasId, filename)
 {
-
+    link.href = document.getElementById(canvasId).toDataURL();
+    link.download = filename;
 }
+
+document.getElementById("downloadButton").addEventListener("click", function(){
+    downloadCanvas(this, "logoCanvas", "yamlogo.png");
+}, false);
